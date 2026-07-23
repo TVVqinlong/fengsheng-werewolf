@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>风声谍影 · 12人夜谈</title>
+<style>
+  :root{
+    --bg:#0f0d1a;
+    --bg2:#161228;
+    --panel:#1c1832;
+    --panel2:#241f3d;
+    --line:#382f57;
+    --ink:#ece7f7;
+    --ink-dim:#9c93b8;
+    --ink-faint:#6c6390;
+    --gold:#d3a95c;
+    --gold-dim:#8a7440;
+    --wolf:#b1453f;
+    --wolf-dim:#5c2b2a;
+    --good:#5fae9c;
+    --violet:#8a7cff;
+    --shadow: 0 12px 40px rgba(0,0,0,.45);
+    --serif: "Songti SC","Noto Serif SC","STSong","SimSun",serif;
+    --sans: -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+    --mono: "SF Mono","Menlo","Consolas",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 50% -10%, #2a2350 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 110%, #1c2b45 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{max-width:920px;margin:0 auto;padding:20px 16px 60px;}
+  .stars{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff 0, transparent 60%),
+      radial-gradient(1px 1px at 80% 10%, #fff 0, transparent 60%),
+      radial-gradient(1.5px 1.5px at 60% 70%, #fff 0, transparent 60%),
+      radial-gradient(1px 1px at 30% 80%, #fff 0, transparent 60%),
+      radial-gradient(1px 1px at 90% 60%, #fff 0, transparent 60%),
+      radial-gradient(1.5px 1.5px at 45% 35%, #fff 0, transparent 60%);
+    background-size:400px 400px;
+  }
+  h1,h2,h3{font-family:var(--serif);font-weight:700;margin:0 0 6px;letter-spacing:.02em;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);opacity:.85;}
+  .title{font-size:30px;color:var(--ink);}
+  .subtitle{color:var(--ink-dim);font-size:14px;line-height:1.7;}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn{
+    appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+    padding:11px 18px;border-radius:10px;font-size:14px;cursor:pointer;font-family:var(--sans);
+    transition:all .15s ease; font-weight:600;
+  }
+  .btn:hover{border-color:var(--gold-dim);transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .btn-gold{background:linear-gradient(180deg,#e2bb74,var(--gold));color:#211a0c;border:none;}
+  .btn-gold:hover{filter:brightness(1.08);}
+  .btn-wolf{background:linear-gradient(180deg,#c65852,var(--wolf));color:#fff;border:none;}
+  .btn-ghost{background:transparent;}
+  .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px;}
+  input[type=text]{
+    background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:10px;
+    padding:11px 14px;font-size:14px;font-family:var(--sans);outline:none;width:100%;
+  }
+  input[type=text]:focus{border-color:var(--gold-dim);}
+  .label{font-size:12px;color:var(--ink-dim);margin-bottom:6px;display:block;letter-spacing:.03em;}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--line);
+    padding:4px 10px;border-radius:999px;font-size:12px;color:var(--ink-dim);font-family:var(--mono);}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--good);}
+  .dot.dead{background:var(--wolf);}
+  .divider{height:1px;background:var(--line);margin:16px 0;border:none;}
+  .muted{color:var(--ink-dim);}
+  .center{text-align:center;}
+  a.link{color:var(--gold);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
+
+  /* seat circle */
+  .table-wrap{position:relative;width:min(100%,460px);aspect-ratio:1/1;margin:6px auto 18px;}
+  .table-moon{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:36%;height:36%;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #3a3260, #16132a 70%);
+    border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.5), 0 0 30px rgba(138,124,255,.12);
+  }
+  .table-moon .phase-icon{font-size:28px;line-height:1;margin-bottom:4px;}
+  .table-moon .phase-name{font-family:var(--serif);font-size:15px;color:var(--ink);}
+  .table-moon .phase-round{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:2px;}
+  .seat{
+    position:absolute;width:52px;height:64px;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;align-items:center;gap:4px;cursor:default;
+  }
+  .seat.pickable{cursor:pointer;}
+  .seat .avatar{
+    width:40px;height:40px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:15px;color:var(--ink);
+    transition:all .15s ease;position:relative;
+  }
+  .seat.pickable .avatar:hover{border-color:var(--gold);box-shadow:0 0 0 3px rgba(211,169,92,.15);}
+  .seat.selected .avatar{border-color:var(--gold);box-shadow:0 0 0 4px rgba(211,169,92,.25);}
+  .seat.dead .avatar{opacity:.35;filter:grayscale(1);}
+  .seat.me .avatar{border-color:var(--violet);box-shadow:0 0 0 3px rgba(138,124,255,.18);}
+  .seat .num{position:absolute;top:-6px;left:-6px;background:var(--bg2);border:1px solid var(--line);
+    border-radius:50%;width:16px;height:16px;font-size:9px;font-family:var(--mono);display:flex;align-items:center;justify-content:center;color:var(--ink-faint);}
+  .seat .nm{font-size:10.5px;color:var(--ink-dim);max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
+  .seat.dead .nm{text-decoration:line-through;opacity:.5;}
+
+  /* role card */
+  .role-card{border:1px solid var(--gold-dim);background:linear-gradient(160deg,#241d3f,#1a1530);border-radius:14px;padding:16px;}
+  .role-card .rname{font-family:var(--serif);font-size:20px;color:var(--gold);}
+  .role-card .rteam{font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;}
+  .rteam.wolf{color:var(--wolf);}
+  .rteam.god{color:var(--good);}
+  .rteam.villager{color:var(--violet);}
+  .role-card p{font-size:13.5px;line-height:1.75;color:var(--ink-dim);margin:10px 0 0;}
+
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);color:var(--ink-dim);margin-right:6px;}
+  .tag.wolf{color:var(--wolf);border-color:var(--wolf-dim);}
+  .tag.god{color:var(--good);}
+  .tag.villager{color:var(--violet);}
+
+  .log{max-height:220px;overflow-y:auto;font-size:13px;line-height:1.9;color:var(--ink-dim);
+    background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .log div{padding:2px 0;}
+  .log .r{color:var(--gold);font-family:var(--mono);font-size:11px;margin-right:6px;}
+
+  .chatbox{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;}
+  .msg{display:flex;gap:8px;font-size:13.5px;}
+  .msg .who{color:var(--gold);font-weight:600;white-space:nowrap;}
+  .msg .txt{color:var(--ink);word-break:break-word;}
+  .msg.me .who{color:var(--violet);}
+
+  .timerbar{height:4px;border-radius:3px;background:var(--bg2);overflow:hidden;margin-top:10px;}
+  .timerbar > div{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width 1s linear;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:520px){.grid2{grid-template-columns:1fr;}}
+
+  .banner{border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.7;}
+  .banner.wolf{background:rgba(177,69,63,.12);border:1px solid var(--wolf-dim);color:#f0c9c6;}
+  .banner.good{background:rgba(95,174,156,.12);border:1px solid #2c5a4f;color:#c9ede3;}
+  .banner.info{background:rgba(138,124,255,.1);border:1px solid #4a4380;color:#d8d4f7;}
+
+  details.rules summary{cursor:pointer;color:var(--gold);font-size:13px;user-select:none;}
+  details.rules{font-size:13px;color:var(--ink-dim);line-height:1.85;}
+  details.rules .rblock{margin:10px 0;padding-left:12px;border-left:2px solid var(--line);}
+  details.rules b{color:var(--ink);}
+
+  footer.note{font-size:11.5px;color:var(--ink-faint);text-align:center;margin-top:24px;line-height:1.8;}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);
+    border:1px solid var(--gold-dim);color:var(--ink);padding:10px 18px;border-radius:10px;font-size:13px;
+    box-shadow:var(--shadow);z-index:50;}
+</style>
+</head>
+<body>
+<div class="stars"></div>
+<div id="app"></div>
+<script>
+(function(){
+"use strict";
+
+/* ============================== 常量与角色定义 ============================== */
+
+var ROLES = {
+  gargoyle:  {name:"觉醒石像鬼", team:"wolf",     tag:"狼",
+    desc:"每晚可查验一名玩家的具体身份（不可验自己），与其他狼人互不相认；每晚可参与狼队袭击目标的选择。"},
+  hiddenwolf:{name:"觉醒隐狼",   team:"wolf",     tag:"狼",
+    desc:"与其他狼人互不相认。每晚可选择模仿一名玩家——立即得知其具体身份，并从模仿之夜结束后获得其技能的简化效果；每晚也可参与狼队袭击目标的选择。"},
+  seer:      {name:"预言家",     team:"god",      tag:"神",
+    desc:"每晚可查验一名玩家所属的阵营（好人 / 狼人），无法得知具体身份。"},
+  mirror:    {name:"魔镜少女",   team:"god",      tag:"神",
+    desc:"每晚可查验一名玩家的具体身份。"},
+  witch:     {name:"女巫",       team:"god",      tag:"神",
+    desc:"拥有解药与毒药各一瓶，整局各限用一次；解药只能救当晚被狼人袭击的玩家（不可自救）；毒药可毒杀任意一人；同一晚只能使用一种药。"},
+  hunter:    {name:"猎人",       team:"god",      tag:"神",
+    desc:"死亡时（若非中毒身亡）可开枪带走场上一名玩家。"},
+  dreamweaver:{name:"摄梦人",    team:"god",      tag:"神",
+    desc:"每晚指定一名玩家成为「梦游者」，梦游者当晚免疫一切夜间伤害；连续两晚摄梦同一人，该玩家会因梦境反噬死亡；若摄梦人当晚被袭击/毒杀，当晚的梦游者会一同遭殃；若摄梦人夜间死亡，当晚梦游者也会一同死亡。"},
+  bear:      {name:"熊",         team:"villager", tag:"民",
+    desc:"没有主动技能。只要熊存活，每天清晨都会根据其左右两侧存活玩家中是否存在狼人，公开宣布「熊咆哮了」或「熊没有咆哮」。"},
+  pufferfish:{name:"河豚",       team:"villager", tag:"民",
+    desc:"若河豚被投票放逐，可以翻牌反击，带走所有投票放逐河豚的玩家（整局仅能发动一次）。"},
+  whitecat:  {name:"白猫",       team:"villager", tag:"民",
+    desc:"无论因何种原因即将出局，都会先翻牌，额外存活到下一次放逐投票结束后才真正离场。"},
+  admirer:   {name:"暗恋者",     team:"villager", tag:"民",
+    desc:"游戏开始时暗中选择一名玩家作为暗恋对象（互相都不知情）。暗恋者的个人成败随暗恋对象所在阵营，但场上按好人阵营的「民」计算，也是狼人「屠边」的目标之一。"}
+};
+var DECK = ["gargoyle","gargoyle","hiddenwolf","seer","mirror","witch","hunter","dreamweaver","bear","pufferfish","whitecat","admirer"];
+var GOD_KEYS = ["seer","mirror","witch","hunter","dreamweaver"];
+var VILLAGER_KEYS = ["bear","pufferfish","whitecat","admirer"];
+
+var NIGHT_MS = 100000, DISCUSS_MS = 150000, VOTE_MS = 50000, HUNTER_MS = 30000;
+
+/* ============================== 工具函数 ============================== */
+
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "id-"+Math.random().toString(36).slice(2)+Date.now().toString(36);
+}
+function hashStr(s){
+  var h=1779033703; s=String(s);
+  for(var i=0;i<s.length;i++){h=Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h<<13)|(h>>>19);}
+  return (h>>>0);
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a>>>15), 1 | a);
+    t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  };
+}
+function seededRng(seedStr){ return mulberry32(hashStr(seedStr)); }
+function seededShuffle(arr, seedStr){
+  var rng = seededRng(seedStr), a = arr.slice();
+  for(var i=a.length-1;i>0;i--){ var j = Math.floor(rng()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+function seededPick(arr, seedStr){
+  if(!arr.length) return null;
+  var rng = seededRng(seedStr);
+  return arr[Math.floor(rng()*arr.length)];
+}
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function fmtTime(ms){ var s=Math.max(0,Math.ceil(ms/1000)); var m=Math.floor(s/60); var r=s%60; return m+":"+(r<10?"0":"")+r; }
+
+/* ============================== 存储封装 ============================== */
+
+var HAS_STORAGE = !!(window.storage && window.storage.get);
+var memStore = {}; // 本地内存兜底（无 storage 时的单机演示模式）
+
+async function sGet(key, shared){
+  if(!HAS_STORAGE){ return memStore.hasOwnProperty(key) ? memStore[key] : null; }
+  try{
+    var r = await window.storage.get(key, !!shared);
+    return r ? r.value : null;
+  }catch(e){ return null; }
+}
+async function sSet(key, value, shared){
+  if(!HAS_STORAGE){ memStore[key]=value; return true; }
+  try{
+    var r = await window.storage.set(key, value, !!shared);
+    return !!r;
+  }catch(e){ return false; }
+}
+async function sList(prefix, shared){
+  if(!HAS_STORAGE){
+    return Object.keys(memStore).filter(function(k){ return k.indexOf(prefix)===0; });
+  }
+  try{
+    var r = await window.storage.list(prefix, !!shared);
+    return r && r.keys ? r.keys : [];
+  }catch(e){ return []; }
+}
+async function sGetJSON(key, shared){
+  var v = await sGet(key, shared);
+  if(v==null) return null;
+  try{ return JSON.parse(v); }catch(e){ return null; }
+}
+async function sSetJSON(key, obj, shared){
+  return sSet(key, JSON.stringify(obj), shared);
+}
+
+/* ============================== 全局状态 ============================== */
+
+var App = {
+  screen: "landing",   // landing | lobby | game
+  myId: null,
+  myName: "",
+  room: null,
+  lobbyPlayers: [],     // [{id,name}]
+  game: null,           // 解析后的共享游戏状态
+  chat: [],
+  err: "",
+  busy: false,
+  selectedTarget: null, // 当前选择的目标 id（用于夜间/投票等）
+  witchChoice: null,    // 'heal' | 'poison'
+  toast: null,
+  showRoleCard: true,
+  showRules: false
+};
+
+function toast(msg){
+  App.toast = msg;
+  render();
+  setTimeout(function(){ if(App.toast===msg){ App.toast=null; render(); } }, 2600);
+}
+
+/* ============================== 初始化 ============================== */
+
+async function boot(){
+  var pid = await sGet("pid", false);
+  if(!pid){ pid = uid(); await sSet("pid", pid, false); }
+  App.myId = pid;
+  var nm = await sGet("pname", false);
+  if(nm) App.myName = nm;
+  render();
+  setInterval(tick, 2200);
+}
+
+/* ============================== 房间 / 大厅 ============================== */
+
+function randRoomCode(){
+  var chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789", s="";
+  for(var i=0;i<5;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+async function createRoom(){
+  if(!App.myName.trim()){ toast("请先输入你的名字"); return; }
+  var code = (document.getElementById("roomCodeInput") && document.getElementById("roomCodeInput").value.trim().toUpperCase()) || randRoomCode();
+  App.room = code;
+  await joinRoomFlow();
+}
+async function joinRoom(){
+  if(!App.myName.trim()){ toast("请先输入你的名字"); return; }
+  var el = document.getElementById("joinCodeInput");
+  var code = el ? el.value.trim().toUpperCase() : "";
+  if(!code){ toast("请输入房间码"); return; }
+  App.room = code;
+  await joinRoomFlow();
+}
+async function joinRoomFlow(){
+  await sSet("pname", App.myName.trim(), false);
+  // 若游戏已经开始，直接进入
+  var g = await sGetJSON("game:"+App.room, true);
+  if(g && g.players.some(function(p){return p.id===App.myId;})){
+    App.game = g; App.screen="game"; render(); return;
+  }
+  if(g && !g.players.some(function(p){return p.id===App.myId;})){
+    // 游戏已开始且我不在其中：只读旁观
+    App.game = g; App.screen="game"; render(); return;
+  }
+  var list = await sList("lobby:"+App.room+":", true);
+  if(list.length>=12){
+    var already = false;
+    for(var i=0;i<list.length;i++){ if(list[i]===("lobby:"+App.room+":"+App.myId)){ already=true; break; } }
+    if(!already){ toast("房间已满（12/12）"); return; }
+  }
+  await sSetJSON("lobby:"+App.room+":"+App.myId, {name:App.myName.trim(), ts:Date.now()}, true);
+  App.screen = "lobby";
+  render();
+  await refreshLobby();
+}
+
+async function refreshLobby(){
+  if(!App.room) return;
+  var g = await sGetJSON("game:"+App.room, true);
+  if(g){ App.game=g; App.screen="game"; render(); return; }
+  var keys = await sList("lobby:"+App.room+":", true);
+  var players = [];
+  for(var i=0;i<keys.length;i++){
+    var v = await sGetJSON(keys[i], true);
+    if(v){ players.push({id: keys[i].split(":").pop(), name:v.name, ts:v.ts||0}); }
+  }
+  players.sort(function(a,b){ return a.ts-b.ts; });
+  App.lobbyPlayers = players;
+  render();
+}
+
+async function leaveLobby(){
+  App.screen="landing"; App.room=null; App.lobbyPlayers=[]; render();
+}
+
+async function startGame(){
+  if(App.lobbyPlayers.length!==12){ toast("需要正好 12 名玩家"); return; }
+  var ids = App.lobbyPlayers.map(function(p){return p.id;}).sort();
+  var seatOrder = seededShuffle(ids, App.room+":seats");
+  var roleOrder = seededShuffle(DECK, App.room+":roles");
+  var byId = {}; App.lobbyPlayers.forEach(function(p){ byId[p.id]=p; });
+  var players = seatOrder.map(function(pid, idx){
+    return {
+      id: pid, name: byId[pid].name, seat: idx+1, role: roleOrder[idx],
+      alive:true, deathRound:null, deathCause:null, pendingCatFlip:false
+    };
+  });
+  var g = {
+    room: App.room, phase:"night", round:1, deadline: Date.now()+NIGHT_MS,
+    players: players,
+    dreamHistory: [],
+    witchPotions: (function(){ var w={}; players.forEach(function(p){ if(p.role==="witch") w[p.id]={heal:true,poison:true}; }); return w; })(),
+    hiddenWolf: (function(){ var hw=null; players.forEach(function(p){ if(p.role==="hiddenwolf") hw={pid:p.id, mimicRole:null, mimicLocked:false, bonusKillUsed:false, poisonUsed:false}; }); return hw; })(),
+    pending: {kill:[],inspect:[],mimic:[],mimicact:[],witch:[],seer:[],mirror:[],dream:[],crush:[]},
+    awaitingHunter:null, hunterEventTag:null,
+    nightLog:[], bearRoar:null,
+    privateInfo: {},
+    lastVoteResult: null,
+    log: ["夜幕降临，十二人的秘密就此展开。"],
+    winner:null,
+    createdAt: Date.now(), updatedAt: Date.now(), v:1
+  };
+  players.forEach(function(p){ g.privateInfo[p.id]=[]; });
+  await sSetJSON("game:"+App.room, g, true);
+  App.game = g; App.screen="game";
+  render();
+}
+
+/* ============================== 通用取值助手 ============================== */
+
+function me(g){ return g.players.find(function(p){return p.id===App.myId;}); }
+function alivePlayers(g){ return g.players.filter(function(p){return p.alive;}); }
+function byId(g,id){ return g.players.find(function(p){return p.id===id;}); }
+function teamOf(role){ return ROLES[role].team; }
+function aliveWolves(g){ return g.players.filter(function(p){return p.alive && teamOf(p.role)==="wolf";}); }
+function isHiddenWolf(g,pid){ return g.hiddenWolf && g.hiddenWolf.pid===pid; }
+
+function roleLabelFor(g, viewerId, targetPlayer){
+  // 用于结算展示：若目标是已锁定模仿的隐狼，标注模仿身份
+  var base = ROLES[targetPlayer.role].name;
+  if(isHiddenWolf(g, targetPlayer.id) && g.hiddenWolf.mimicLocked){
+    return base + "（已模仿 "+ROLES[g.hiddenWolf.mimicRole].name+"）";
+  }
+  return base;
+}
+
+function pushPrivate(g, pid, entry){
+  if(!g.privateInfo[pid]) g.privateInfo[pid]=[];
+  g.privateInfo[pid].push(entry);
+}
+function pushLog(g, text){
+  g.log.push(text);
+  if(g.log.length>60) g.log.splice(0, g.log.length-60);
+}
+
+/* ============================== 死亡应用（含连锁） ============================== */
+
+function applyDeath(g, pid, cause, round, queue){
+  var p = byId(g, pid);
+  if(!p || !p.alive) return;
+  if(p.role==="whitecat" && !p.pendingCatFlip && cause!=="catflip"){
+    p.pendingCatFlip = true;
+    pushLog(g, "🐈 "+p.name+" 翻牌了……但似乎还没有真正离开。");
+    return; // 延迟到下次放逐投票结束后才真正死亡
+  }
+  p.alive = false; p.deathRound = round; p.deathCause = cause;
+  pushLog(g, "☠️ "+p.name+" 离开了游戏。");
+  // 河豚：仅在"因放逐死亡"时反击投票给它的人
+  if(p.role==="pufferfish" && cause==="exile" && g.lastVoteResult && !g.pufferfishUsed){
+    g.pufferfishUsed = true;
+    var voters = Object.keys(g.lastVoteResult.tally && g.lastVoteResult.votesByVoter ? g.lastVoteResult.votesByVoter : {})
+      .filter(function(voterId){ return g.lastVoteResult.votesByVoter[voterId]===pid; });
+    if(voters.length){
+      pushLog(g, "🐡 河豚 "+p.name+" 翻牌反击，带走了投票放逐它的 "+voters.length+" 名玩家！");
+      voters.forEach(function(vid){ queue.push({pid:vid, cause:"pufferfish"}); });
+    }
+  }
+  // 猎人 / 模仿猎人的隐狼：非中毒死亡触发开枪
+  var mimicHunter = isHiddenWolf(g,pid) && g.hiddenWolf.mimicLocked && g.hiddenWolf.mimicRole==="hunter";
+  if((p.role==="hunter" || mimicHunter) && cause!=="poison" && cause!=="catflip"){
+    g.awaitingHunter = pid;
+    g.hunterEventTag = round+"_"+cause+"_"+pid;
+  }
+}
+
+function drainQueue(g, queue, round){
+  var guard=0;
+  while(queue.length && guard<50){
+    var item = queue.shift();
+    applyDeath(g, item.pid, item.cause, round, queue);
+    guard++;
+  }
+}
+
+function checkWin(g){
+  if(g.winner) return;
+  var wolves = g.players.filter(function(p){return p.alive && teamOf(p.role)==="wolf";}).length;
+  var gods = g.players.filter(function(p){return p.alive && teamOf(p.role)==="god";}).length;
+  var vill = g.players.filter(function(p){return p.alive && teamOf(p.role)==="villager";}).length;
+  if(wolves===0){ g.winner="good"; g.phase="ended"; pushLog(g,"🌅 狼人已全部出局，好人阵营获胜！"); }
+  else if(gods===0 || vill===0){ g.winner="wolf"; g.phase="ended"; pushLog(g,"🐺 好人阵营已被屠边，狼人阵营获胜！"); }
+}
+
+/* ============================== 夜晚结算 ============================== */
+
+function actKey(round, kind, pid){ return "act:"+App.room+":"+round+":"+kind+":"+pid; }
+
+function expectedNightKinds(g){
+  var round = g.round;
+  var exp = {kill:[], inspect:[], mimic:[], mimicact:[], witch:[], seer:[], mirror:[], dream:[], crush:[]};
+  aliveWolves(g).forEach(function(p){ exp.kill.push(p.id); });
+  g.players.forEach(function(p){
+    if(!p.alive) return;
+    if(p.role==="gargoyle") exp.inspect.push(p.id);
+    if(p.role==="seer") exp.seer.push(p.id);
+    if(p.role==="mirror") exp.mirror.push(p.id);
+    if(p.role==="dreamweaver") exp.dream.push(p.id);
+    if(p.role==="witch"){
+      var pot = g.witchPotions[p.id];
+      if(pot && (pot.heal||pot.poison)) exp.witch.push(p.id);
+    }
+    if(p.role==="admirer" && round===1) exp.crush.push(p.id);
+  });
+  if(g.hiddenWolf){
+    var hp = byId(g, g.hiddenWolf.pid);
+    if(hp && hp.alive){
+      if(!g.hiddenWolf.mimicLocked){ exp.mimic.push(hp.id); }
+      else{
+        var mr = g.hiddenWolf.mimicRole;
+        if((mr==="seer"||mr==="mirror") ) exp.mimicact.push(hp.id);
+        else if(mr==="witch" && !g.hiddenWolf.poisonUsed) exp.mimicact.push(hp.id);
+        else if(mr!=="hunter" && !g.hiddenWolf.bonusKillUsed) exp.mimicact.push(hp.id);
+      }
+    }
+  }
+  return exp;
+}
+
+function allSubmitted(g){
+  var exp = expectedNightKinds(g);
+  var pend = g.pending || {};
+  for(var kind in exp){
+    var need = exp[kind];
+    var have = pend[kind] || [];
+    for(var i=0;i<need.length;i++){ if(have.indexOf(need[i])===-1) return false; }
+  }
+  return true;
+}
+
+async function resolveNight(g){
+  var round = g.round;
+  var exp = expectedNightKinds(g);
+  var queue = [];
+
+  // 读取各类行动的真实值（权威来自各自玩家自己的 key）
+  async function readAll(kind){
+    var out = {};
+    for(var i=0;i<exp[kind].length;i++){
+      var pid = exp[kind][i];
+      var v = await sGetJSON(actKey(round, kind, pid), true);
+      if(v!=null) out[pid]=v;
+    }
+    return out;
+  }
+  var killV = await readAll("kill");
+  var inspectV = await readAll("inspect");
+  var mimicV = await readAll("mimic");
+  var mimicactV = await readAll("mimicact");
+  var witchV = await readAll("witch");
+  var seerV = await readAll("seer");
+  var mirrorV = await readAll("mirror");
+  var dreamV = await readAll("dream");
+  var crushV = await readAll("crush");
+
+  // 暗恋者选择（仅第一夜）
+  if(round===1){
+    Object.keys(crushV).forEach(function(pid){
+      var t = crushV[pid];
+      if(t && t.target){ g.admirerCrushId = t.target; }
+    });
+  }
+
+  // 摄梦人：本回合梦游者
+  var dreamer = null;
+  var dwPid = null;
+  g.players.forEach(function(p){ if(p.role==="dreamweaver") dwPid=p.id; });
+  if(dwPid && dreamV[dwPid] && dreamV[dwPid].target){ dreamer = dreamV[dwPid].target; }
+  var prevDream = g.dreamHistory.length ? g.dreamHistory[g.dreamHistory.length-1] : null;
+  var dreamOverkill = null;
+  if(dreamer && prevDream && prevDream.round===round-1 && prevDream.target===dreamer){
+    dreamOverkill = dreamer;
+  }
+  g.dreamHistory.push({round:round, target:dreamer});
+
+  // 狼队集体袭击目标（多数票，平票用种子随机打破）
+  var tally = {};
+  Object.keys(killV).forEach(function(pid){
+    var t = killV[pid] && killV[pid].target;
+    if(t && t!=="skip"){ tally[t]=(tally[t]||0)+1; }
+  });
+  var wolfTarget = null, top=[], max=0;
+  Object.keys(tally).forEach(function(t){ if(tally[t]>max){max=tally[t]; top=[t];} else if(tally[t]===max){top.push(t);} });
+  if(top.length===1) wolfTarget = top[0];
+  else if(top.length>1) wolfTarget = seededPick(top, App.room+":"+round+":killtie");
+
+  // 石像鬼查验（各自私密结果）
+  Object.keys(inspectV).forEach(function(pid){
+    var t = inspectV[pid] && inspectV[pid].target;
+    if(!t) return;
+    var tp = byId(g,t);
+    if(!tp) return;
+    pushPrivate(g, pid, {round:round, kind:"石像鬼查验", targetName:tp.name, result: roleLabelFor(g,pid,tp)});
+  });
+
+  // 觉醒隐狼：模仿 或 使用已模仿的能力
+  var hw = g.hiddenWolf;
+  var bonusKillTarget = null;
+  if(hw){
+    var hwAct = mimicV[hw.pid];
+    if(hwAct && !hw.mimicLocked && hwAct.target){
+      var tp2 = byId(g, hwAct.target);
+      if(tp2){
+        hw.mimicLocked = true; hw.mimicRole = tp2.role;
+        pushPrivate(g, hw.pid, {round:round, kind:"模仿", targetName:tp2.name, result:"你模仿了「"+ROLES[tp2.role].name+"」，获得其技能的简化效果。"});
+      }
+    } else if(hw.mimicLocked){
+      var ma = mimicactV[hw.pid];
+      if(ma){
+        if((hw.mimicRole==="seer"||hw.mimicRole==="mirror") && ma.target){
+          var tp3 = byId(g, ma.target);
+          if(tp3){
+            var res = hw.mimicRole==="seer" ? (teamOf(tp3.role)==="wolf" && !isHiddenWolf(g,tp3.id) ? "狼人阵营" : (isHiddenWolf(g,tp3.id)&&!g.hiddenWolf.mimicLocked?"好人阵营":(teamOf(tp3.role)==="wolf"?"狼人阵营":"好人阵营"))) : roleLabelFor(g,hw.pid,tp3);
+            pushPrivate(g, hw.pid, {round:round, kind:"模仿查验", targetName:tp3.name, result:res});
+          }
+        } else if(hw.mimicRole==="witch" && ma.type==="poison" && ma.target && !hw.poisonUsed){
+          hw.poisonUsed = true;
+          queue.push({pid:ma.target, cause:"poison"});
+          pushLog(g, "隐狼悄悄使用了模仿来的毒药……");
+        } else if(hw.mimicRole!=="hunter" && ma.type==="kill" && ma.target && !hw.bonusKillUsed){
+          hw.bonusKillUsed = true;
+          bonusKillTarget = ma.target;
+        }
+      }
+    }
+  }
+
+  // 女巫
+  var healedTarget = null;
+  Object.keys(witchV).forEach(function(pid){
+    var a = witchV[pid];
+    if(!a || a.type==="pass") return;
+    var pot = g.witchPotions[pid];
+    if(a.type==="heal" && pot.heal && wolfTarget && a.target===wolfTarget && a.target!==pid){
+      pot.heal=false; healedTarget=wolfTarget;
+      pushLog(g, "女巫悄悄救下了一个人……");
+    } else if(a.type==="poison" && pot.poison && a.target){
+      pot.poison=false;
+      queue.push({pid:a.target, cause:"poison"});
+      pushLog(g, "女巫悄悄下了毒……");
+    }
+  });
+
+  // 预言家 / 魔镜少女
+  Object.keys(seerV).forEach(function(pid){
+    var t = seerV[pid] && seerV[pid].target;
+    if(!t) return;
+    var tp = byId(g,t);
+    if(!tp) return;
+    var isWolfShown = teamOf(tp.role)==="wolf";
+    if(isHiddenWolf(g,tp.id)){
+      isWolfShown = g.hiddenWolf.mimicLocked ? (teamOf(g.hiddenWolf.mimicRole)==="wolf") : false;
+    }
+    pushPrivate(g, pid, {round:round, kind:"预言家查验", targetName:tp.name, result: isWolfShown ? "狼人阵营" : "好人阵营"});
+  });
+  Object.keys(mirrorV).forEach(function(pid){
+    var t = mirrorV[pid] && mirrorV[pid].target;
+    if(!t) return;
+    var tp = byId(g,t);
+    if(!tp) return;
+    pushPrivate(g, pid, {round:round, kind:"魔镜少女查验", targetName:tp.name, result: roleLabelFor(g,pid,tp)});
+  });
+
+  // ---- 汇总死亡，套用摄梦人保护/连坐规则 ----
+  var nightDeaths = []; // {pid, cause}
+  if(wolfTarget && wolfTarget!==healedTarget) nightDeaths.push({pid:wolfTarget, cause:"wolf"});
+  if(bonusKillTarget) nightDeaths.push({pid:bonusKillTarget, cause:"wolf"});
+  if(dreamOverkill) nightDeaths.push({pid:dreamOverkill, cause:"dream"});
+  // 队列里此时可能已有毒药死亡
+  var poisonDeaths = queue.filter(function(q){return q.cause==="poison";}).map(function(q){return q.pid;});
+
+  var allNightTargets = nightDeaths.map(function(d){return d.pid;}).concat(poisonDeaths);
+  // 梦游者免疫：过滤掉指向 dreamer 的伤害（毒药需要从 queue 中也移除）
+  if(dreamer){
+    nightDeaths = nightDeaths.filter(function(d){ return d.pid!==dreamer || d.cause==="dream"; });
+    queue = queue.filter(function(q){
+      if(q.cause==="poison" && q.pid===dreamer) return false;
+      return true;
+    });
+  }
+  // 摄梦人自身被袭击/毒杀 -> 梦游者同受影响
+  if(dwPid && dreamer && dreamer!==dwPid){
+    var dwHit = null;
+    if(wolfTarget===dwPid && wolfTarget!==healedTarget) dwHit="wolf";
+    if(bonusKillTarget===dwPid) dwHit="wolf";
+    if(poisonDeaths.indexOf(dwPid)!==-1) dwHit="poison";
+    if(dwHit){ nightDeaths.push({pid:dreamer, cause:dwHit}); }
+  }
+
+  nightDeaths.forEach(function(d){ queue.push(d); });
+  drainQueue(g, queue, round);
+
+  // 摄梦人夜间死亡 -> 当晚梦游者一并死亡（若上面未覆盖到，例如摄梦人是被 bonus kill 命中已在上面处理；此处兜底）
+  var dwPlayer = dwPid ? byId(g,dwPid) : null;
+  if(dwPlayer && !dwPlayer.alive && dwPlayer.deathRound===round && dreamer){
+    var dreamerP = byId(g,dreamer);
+    if(dreamerP && dreamerP.alive){
+      var q2=[{pid:dreamer, cause:"dream"}]; drainQueue(g,q2,round);
+    }
+  }
+
+  checkWin(g);
+  g.nightLog = g.log.slice(); // 快照供公告参考
+  if(g.winner){ return; }
+
+  // 熊：黎明播报
+  var bear = g.players.find(function(p){return p.role==="bear";});
+  if(bear && bear.alive){
+    var seats = g.players.map(function(p){return p.seat;});
+    var n = g.players.length;
+    var left = g.players.find(function(p){ return ((p.seat % n) + n) % n === (((bear.seat-2)%n)+n)%n; });
+    // 更稳妥：按座位号在 1..12 环上找相邻
+    var leftSeat = bear.seat-1===0?12:bear.seat-1;
+    var rightSeat = bear.seat+1===13?1:bear.seat+1;
+    var lp = g.players.find(function(p){return p.seat===leftSeat;});
+    var rp = g.players.find(function(p){return p.seat===rightSeat;});
+    var roar=false;
+    [lp,rp].forEach(function(p){ if(p && p.alive && teamOf(p.role)==="wolf") roar=true; });
+    g.bearRoar = roar;
+  } else { g.bearRoar = null; }
+
+  if(g.awaitingHunter){
+    g.phase="day_announce";
+  } else {
+    g.phase="day_announce";
+  }
+  g.deadline = null;
+  g.pending = {kill:[],inspect:[],mimic:[],mimicact:[],witch:[],seer:[],mirror:[],dream:[],crush:[]};
+  g.updatedAt = Date.now(); g.v = (g.v||0)+1;
+}
+
+/* ============================== 投票结算 ============================== */
+
+function voteKey(round, pid){ return "vote:"+App.room+":"+round+":"+pid; }
+
+async function resolveVote(g){
+  var round = g.round;
+  var alive = alivePlayers(g);
+  var votesByVoter = {};
+  for(var i=0;i<alive.length;i++){
+    var v = await sGet(voteKey(round, alive[i].id), true);
+    if(v && v!=="abstain") votesByVoter[alive[i].id]=v;
+  }
+  var tally = {};
+  Object.keys(votesByVoter).forEach(function(voter){
+    var t = votesByVoter[voter];
+    tally[t]=(tally[t]||0)+1;
+  });
+  var top=[], max=0;
+  Object.keys(tally).forEach(function(t){ if(tally[t]>max){max=tally[t]; top=[t];} else if(tally[t]===max){top.push(t);} });
+  var exiledId = top.length===1 ? top[0] : null;
+  g.lastVoteResult = {tally:tally, votesByVoter:votesByVoter, exiledId:exiledId, tie: top.length>1};
+
+  // 白猫：先记录"在本轮投票之前就已经翻牌、等待兑现"的名单——
+  // 规则是"多存活到白猫下一次放逐投票阶段之后"，所以本轮投票刚导致翻牌的那个人
+  // （比如刚好被放逐、或被河豚反击带走）不应该在本轮就真正死亡，要等到下一轮投票结束后。
+  var priorPendingCats = g.players.filter(function(p){ return p.alive && p.pendingCatFlip; }).map(function(p){return p.id;});
+
+  var queue = [];
+  if(exiledId){
+    pushLog(g, "🗳 投票结束，"+byId(g,exiledId).name+" 被放逐。");
+    queue.push({pid:exiledId, cause:"exile"});
+  } else {
+    pushLog(g, "🗳 投票结果平票，本轮无人被放逐。");
+  }
+  drainQueue(g, queue, round);
+
+  checkWin(g);
+  if(g.winner) return;
+
+  // 兑现上一轮及更早翻牌、这一轮投票已经结束的白猫
+  var q2 = [];
+  priorPendingCats.forEach(function(pid){
+    var p = byId(g, pid);
+    if(p && p.alive && p.pendingCatFlip){ q2.push({pid:pid, cause:"catflip"}); }
+  });
+  drainQueue(g, q2, round);
+
+  checkWin(g);
+  if(g.winner) return;
+
+  g.phase = "night";
+  g.round = g.round+1;
+  g.deadline = Date.now()+NIGHT_MS;
+  g.awaitingHunter = null; g.hunterEventTag=null;
+  g.bearRoar = null;
+  g.updatedAt = Date.now(); g.v=(g.v||0)+1;
+}
+
+/* ============================== 猎人开枪 ============================== */
+
+function hunterKey(tag, pid){ return "hunter:"+App.room+":"+tag+":"+pid; }
+
+async function resolveHunterShot(g){
+  var tag = g.hunterEventTag, hid = g.awaitingHunter;
+  var v = await sGet(hunterKey(tag, hid), true);
+  if(v==null) return false; // 尚未行动
+  var queue=[];
+  if(v && v!=="pass"){
+    pushLog(g, "🔫 "+byId(g,hid).name+" 开枪带走了 "+ (byId(g,v)?byId(g,v).name:"一名玩家") +"！");
+    queue.push({pid:v, cause:"hunter"});
+  } else {
+    pushLog(g, byId(g,hid).name+" 选择不开枪。");
+  }
+  g.awaitingHunter = null; g.hunterEventTag=null;
+  drainQueue(g, queue, g.round);
+  checkWin(g);
+  return true;
+}
+
+/* ============================== 轮询主循环 ============================== */
+
+var resolving = false;
+async function tick(){
+  try{
+    if(App.screen==="lobby"){ await refreshLobby(); return; }
+    if(App.screen!=="game" || !App.room) return;
+    var g = await sGetJSON("game:"+App.room, true);
+    if(!g) return;
+    App.game = g;
+
+    if(g.phase==="day_discuss" || g.phase==="day_vote"){
+      var keys = await sList("chat:"+App.room+":", true);
+      var msgs = [];
+      for(var i=0;i<keys.length;i++){
+        var m = await sGetJSON(keys[i], true);
+        if(m) msgs.push(m);
+      }
+      msgs.sort(function(a,b){return a.ts-b.ts;});
+      App.chat = msgs.slice(-200);
+    }
+
+    render();
+    if(resolving) return;
+    resolving = true;
+    await maybeResolve(g);
+    resolving = false;
+  }catch(e){ resolving=false; }
+}
+
+async function maybeResolve(g){
+  if(g.phase==="ended") return;
+  if(g.awaitingHunter){
+    if(Date.now() >= (g.deadline||0) + HUNTER_MS || await hunterHasActed(g)){
+      var fresh = await sGetJSON("game:"+App.room, true);
+      if(!fresh || fresh.awaitingHunter!==g.awaitingHunter) return;
+      var acted = await resolveHunterShot(fresh);
+      if(!acted && Date.now() < (fresh.deadline||0)+HUNTER_MS) return;
+      if(!acted){ fresh.awaitingHunter=null; fresh.hunterEventTag=null; pushLog(fresh,"（时间到，视为不开枪）"); checkWin(fresh); }
+      fresh.updatedAt=Date.now(); fresh.v=(fresh.v||0)+1;
+      await writeIfCurrent(fresh, g);
+    }
+    return;
+  }
+  if(g.phase==="night"){
+    var ready = allSubmitted(g);
+    var timeUp = g.deadline && Date.now() >= g.deadline;
+    if(ready || timeUp){
+      var fresh2 = await sGetJSON("game:"+App.room, true);
+      if(!fresh2 || fresh2.phase!=="night" || fresh2.round!==g.round) return;
+      await new Promise(function(r){ setTimeout(r, 150+Math.random()*500); });
+      var fresh3 = await sGetJSON("game:"+App.room, true);
+      if(!fresh3 || fresh3.phase!=="night" || fresh3.round!==g.round) return;
+      await resolveNight(fresh3);
+      await writeIfCurrent(fresh3, g);
+    }
+    return;
+  }
+  if(g.phase==="day_announce"){
+    // 自动进入讨论阶段（短暂展示死亡信息后）
+    if(!g.deadline){ g.deadline = Date.now()+8000; await sSetJSON("game:"+App.room, g, true); return; }
+    if(Date.now() >= g.deadline){
+      var fresh4 = await sGetJSON("game:"+App.room, true);
+      if(!fresh4 || fresh4.phase!=="day_announce") return;
+      fresh4.phase="day_discuss"; fresh4.deadline=Date.now()+DISCUSS_MS;
+      fresh4.updatedAt=Date.now(); fresh4.v=(fresh4.v||0)+1;
+      await writeIfCurrent(fresh4, g);
+    }
+    return;
+  }
+  if(g.phase==="day_discuss"){
+    if(g.deadline && Date.now()>=g.deadline){
+      var fresh5 = await sGetJSON("game:"+App.room, true);
+      if(!fresh5 || fresh5.phase!=="day_discuss") return;
+      fresh5.phase="day_vote"; fresh5.deadline=Date.now()+VOTE_MS;
+      fresh5.updatedAt=Date.now(); fresh5.v=(fresh5.v||0)+1;
+      await writeIfCurrent(fresh5, g);
+    }
+    return;
+  }
+  if(g.phase==="day_vote"){
+    var alive = alivePlayers(g);
+    var allVoted = true;
+    for(var i=0;i<alive.length;i++){
+      var v = await sGet(voteKey(g.round, alive[i].id), true);
+      if(v==null){ allVoted=false; break; }
+    }
+    var timeUp2 = g.deadline && Date.now()>=g.deadline;
+    if(allVoted || timeUp2){
+      var fresh6 = await sGetJSON("game:"+App.room, true);
+      if(!fresh6 || fresh6.phase!=="day_vote" || fresh6.round!==g.round) return;
+      await new Promise(function(r){ setTimeout(r, 150+Math.random()*500); });
+      var fresh7 = await sGetJSON("game:"+App.room, true);
+      if(!fresh7 || fresh7.phase!=="day_vote" || fresh7.round!==g.round) return;
+      await resolveVote(fresh7);
+      await writeIfCurrent(fresh7, g);
+    }
+    return;
+  }
+}
+async function hunterHasActed(g){
+  var v = await sGet(hunterKey(g.hunterEventTag, g.awaitingHunter), true);
+  return v!=null;
+}
+async function writeIfCurrent(newState, baseline){
+  await sSetJSON("game:"+App.room, newState, true);
+  App.game = newState;
+  render();
+}
+
+/* ============================== 玩家提交行动 ============================== */
+
+async function markPending(kind, pid){
+  try{
+    var g = await sGetJSON("game:"+App.room, true);
+    if(!g) return;
+    if(!g.pending) g.pending={kill:[],inspect:[],mimic:[],mimicact:[],witch:[],seer:[],mirror:[],dream:[],crush:[]};
+    if(!g.pending[kind]) g.pending[kind]=[];
+    if(g.pending[kind].indexOf(pid)===-1){
+      g.pending[kind].push(pid);
+      await sSetJSON("game:"+App.room, g, true);
+    }
+  }catch(e){}
+}
+
+async function submitNightAction(kind, payload){
+  await sSetJSON(actKey(App.game.round, kind, App.myId), payload, true);
+  await markPending(kind, App.myId);
+  App.selectedTarget=null; App.witchChoice=null;
+  toast("已提交");
+  var g = await sGetJSON("game:"+App.room, true);
+  if(g){ App.game=g; }
+  render();
+}
+async function submitVote(target){
+  await sSet(voteKey(App.game.round, App.myId), target, true);
+  App.selectedTarget=null;
+  toast("已投票");
+  render();
+}
+async function submitHunterShot(target){
+  await sSet(hunterKey(App.game.hunterEventTag, App.myId), target || "pass", true);
+  App.selectedTarget=null;
+  toast(target?"已开枪":"已放弃开枪");
+  render();
+}
+async function sendChat(text){
+  text=(text||"").trim();
+  if(!text) return;
+  var g = App.game;
+  var p = me(g);
+  var key = "chat:"+App.room+":"+Date.now()+"_"+App.myId.slice(0,6)+"_"+Math.floor(Math.random()*1000);
+  await sSetJSON(key, {pid:App.myId, name:p?p.name:App.myName, text:text.slice(0,300), ts:Date.now()}, true);
+  var el = document.getElementById("chatInput");
+  if(el) el.value="";
+  var keys = await sList("chat:"+App.room+":", true);
+  var msgs=[];
+  for(var i=0;i<keys.length;i++){ var m=await sGetJSON(keys[i], true); if(m) msgs.push(m); }
+  msgs.sort(function(a,b){return a.ts-b.ts;});
+  App.chat = msgs.slice(-200);
+  render();
+}
+
+/* ============================== 渲染：座位圆桌 ============================== */
+
+function renderSeatCircle(g, opts){
+  opts = opts||{};
+  var n = g.players.length;
+  var seats = g.players.slice().sort(function(a,b){return a.seat-b.seat;});
+  var html = '<div class="table-wrap"><div class="table-moon">'+
+    '<div class="phase-icon">'+phaseIcon(g.phase)+'</div>'+
+    '<div class="phase-name">'+phaseName(g.phase)+'</div>'+
+    '<div class="phase-round">第 '+g.round+' 轮</div>'+
+    '</div>';
+  seats.forEach(function(p, idx){
+    var angle = (idx / n) * Math.PI * 2 - Math.PI/2;
+    var x = 50 + 42*Math.cos(angle);
+    var y = 50 + 42*Math.sin(angle);
+    var isMe = p.id===App.myId;
+    var isDead = !p.alive;
+    var pickable = opts.pickable && p.alive && (!opts.excludeSelf || p.id!==App.myId);
+    var selected = opts.pickable && App.selectedTarget===p.id;
+    var cls = "seat"+(isDead?" dead":"")+(isMe?" me":"")+(pickable?" pickable":"")+(selected?" selected":"");
+    var initial = p.name ? p.name.slice(0,1) : "?";
+    html += '<div class="'+cls+'" style="left:'+x+'%;top:'+y+'%" '+(pickable?('onclick="App.pickTarget(\''+p.id+'\')"'):'')+'>'+
+      '<div class="avatar"><span class="num">'+p.seat+'</span>'+esc(initial)+'</div>'+
+      '<div class="nm">'+esc(p.name)+(isMe?"（你）":"")+'</div>'+
+      '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+function phaseIcon(phase){
+  if(phase==="night") return "🌙";
+  if(phase==="ended") return "🏁";
+  if(phase==="lobby") return "🕯";
+  return "☀️";
+}
+function phaseName(phase){
+  return {night:"黑夜", day_announce:"清晨播报", day_discuss:"白天讨论", day_vote:"投票放逐", day_result:"结果", ended:"游戏结束"}[phase] || phase;
+}
+
+/* ============================== 渲染：各屏幕 ============================== */
+
+function render(){
+  var el = document.getElementById("app");
+  if(App.screen==="landing") el.innerHTML = renderLanding();
+  else if(App.screen==="lobby") el.innerHTML = renderLobby();
+  else if(App.screen==="game") el.innerHTML = renderGame();
+  if(App.toast) el.innerHTML += '<div class="toast">'+esc(App.toast)+'</div>';
+}
+
+function renderLanding(){
+  return ''+
+  '<div class="eyebrow">网易狼人杀 · 12人进阶场</div>'+
+  '<h1 class="title">风声谍影</h1>'+
+  '<p class="subtitle">觉醒石像鬼×2、觉醒隐狼、预言家（只查阵营）、魔镜少女（只查身份）、熊、女巫、猎人、摄梦人、河豚、白猫、暗恋者 —— 十二人，一夜秘密。<br>邀请 11 位朋友，各自打开这个页面，输入同一个房间码即可一起开局。</p>'+
+  '<div class="card">'+
+    '<label class="label">你的名字</label>'+
+    '<input type="text" id="nameInput" value="'+esc(App.myName)+'" placeholder="给自己取个代号" oninput="App.onNameInput(this.value)"/>'+
+    '<div class="divider"></div>'+
+    '<div class="grid2">'+
+      '<div>'+
+        '<label class="label">创建新房间</label>'+
+        '<input type="text" id="roomCodeInput" placeholder="留空则随机生成房间码" style="margin-bottom:10px"/>'+
+        '<button class="btn btn-gold" style="width:100%" onclick="App.createRoom()">创建房间</button>'+
+      '</div>'+
+      '<div>'+
+        '<label class="label">加入已有房间</label>'+
+        '<input type="text" id="joinCodeInput" placeholder="输入房间码" style="margin-bottom:10px"/>'+
+        '<button class="btn" style="width:100%" onclick="App.joinRoom()">加入房间</button>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+  renderRulesCard()+
+  '<footer class="note">本页面通过浏览器共享存储同步游戏状态，适合熟人之间的轻量线上娱乐。<br>由于没有独立后端，理论上技术娴熟的玩家可以在共享数据中看到他人身份，请与信任的朋友一起游玩。</footer>';
+}
+
+function renderRulesCard(){
+  var rows = DECK.filter(function(k,i){return DECK.indexOf(k)===i;}).map(function(key){
+    var r = ROLES[key];
+    return '<div class="rblock"><b>'+r.name+'</b>（'+r.tag+'）— '+r.desc+'</div>';
+  }).join("");
+  return '<div class="card"><details class="rules"><summary>查看完整板子与规则说明（点击展开）</summary>'+
+    '<div style="margin-top:10px">'+rows+'</div>'+
+    '<div class="divider"></div>'+
+    '<div><b>胜负判定：</b>好人阵营放逐/杀死全部 3 名狼人阵营玩家获胜；狼人阵营只要屠尽 5 名"神"（预言家/魔镜少女/女巫/猎人/摄梦人）或屠尽 4 名"民"（熊/河豚/白猫/暗恋者）之一即获胜。</div>'+
+    '<div class="divider"></div>'+
+    '<div><b>设计说明：</b>官方对"风声谍影"觉醒石像鬼参与刀人的具体方式、以及觉醒隐狼模仿后技能的完整细节未公开完整资料，本页面采用了合理的简化实现——石像鬼与隐狼三名狼人角色共同参与每晚的袭击目标选择；隐狼模仿查验类角色获得持续查验，模仿女巫获得一瓶毒药，模仿猎人获得被动效果，模仿其余角色获得一次性额外袭击。如与你熟悉的版本不同，可将其当作一个平衡的自定义变体来体验。</div>'+
+  '</details></div>';
+}
+
+function renderLobby(){
+  var n = App.lobbyPlayers.length;
+  var list = App.lobbyPlayers.map(function(p,i){
+    return '<div class="pill"><span class="dot"></span>'+(i+1)+'. '+esc(p.name)+(p.id===App.myId?"（你）":"")+'</div>';
+  }).join("");
+  return ''+
+  '<div class="eyebrow">房间码</div>'+
+  '<h1 class="title" style="letter-spacing:.08em">'+esc(App.room)+'</h1>'+
+  '<p class="subtitle">把房间码发给朋友，让他们打开同一个页面加入。凑满 12 人即可开局。</p>'+
+  '<div class="card">'+
+    '<div class="row" style="justify-content:space-between;margin-bottom:10px">'+
+      '<h3 style="margin:0">玩家列表（'+n+' / 12）</h3>'+
+      '<button class="btn btn-sm btn-ghost" onclick="App.leaveLobby()">离开房间</button>'+
+    '</div>'+
+    '<div class="row">'+(list||'<span class="muted">还没有人加入……</span>')+'</div>'+
+    '<div class="divider"></div>'+
+    (n===12
+      ? '<button class="btn btn-gold" style="width:100%" onclick="App.startGame()">🌙 开始游戏（随机分配座位与身份）</button>'
+      : '<button class="btn" style="width:100%" disabled>还差 '+(12-n)+' 人才能开始</button>')+
+  '</div>'+
+  renderRulesCard();
+}
+
+/* ---- 游戏内主渲染 ---- */
+
+function renderGame(){
+  var g = App.game;
+  if(!g) return '<div class="card">加载中…</div>';
+  var mp = me(g);
+  var isSpectator = !mp;
+
+  var html = '';
+  html += '<div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+    '<div><div class="eyebrow">房间 '+esc(App.room)+'</div><h1 class="title" style="font-size:22px">风声谍影</h1></div>'+
+    '<button class="btn btn-sm btn-ghost" onclick="App.toggleRules()">规则</button>'+
+  '</div>';
+
+  if(App.showRules){ html += renderRulesCard(); }
+
+  html += renderSeatCircle(g, {});
+
+  if(isSpectator){
+    html += '<div class="banner info">你正在以旁观视角查看这局游戏（本局开始时你不在场上）。</div>';
+  } else if(mp.alive===false){
+    html += '<div class="banner wolf">你已经离开了游戏（'+deathCauseText(mp.deathCause)+'）。可以继续旁观直到结束。</div>';
+  }
+
+  if(mp){ html += renderRoleCard(g, mp); }
+
+  html += renderPhaseBody(g, mp, isSpectator);
+
+  html += renderLog(g);
+
+  if(g.phase==="ended"){ html += renderEndScreen(g); }
+
+  return html;
+}
+
+function deathCauseText(c){
+  return {wolf:"夜间被袭击", poison:"中毒", dream:"梦境反噬", exile:"被投票放逐", hunter:"被猎人带走", pufferfish:"被河豚反击带走", catflip:"翻牌延迟死亡"}[c] || "出局";
+}
+
+function renderRoleCard(g, mp){
+  var r = ROLES[mp.role];
+  var extra = "";
+  if(mp.role==="hiddenwolf" && g.hiddenWolf){
+    if(g.hiddenWolf.mimicLocked){
+      extra = '<p><b style="color:var(--gold)">已模仿：</b>'+ROLES[g.hiddenWolf.mimicRole].name+'</p>';
+    }
+  }
+  if(mp.role==="witch"){
+    var pot = g.witchPotions[mp.id]||{};
+    extra = '<p>解药：'+(pot.heal?"未使用":"已使用")+' ｜ 毒药：'+(pot.poison?"未使用":"已使用")+'</p>';
+  }
+  if(mp.role==="admirer" && g.admirerCrushId){
+    var crush = byId(g, g.admirerCrushId);
+    extra = '<p>你暗恋的对象是：<b style="color:var(--gold)">'+(crush?esc(crush.name):"？")+'</b>（你不知道对方的真实身份）</p>';
+  }
+  var pinfo = (g.privateInfo[mp.id]||[]).slice(-6).reverse();
+  var pinfoHtml = pinfo.length ? ('<div class="divider"></div><div style="font-size:12.5px;color:var(--ink-dim)"><b style="color:var(--ink)">你的情报：</b><br>'+
+    pinfo.map(function(x){return '第'+x.round+'轮 · '+x.kind+' → '+esc(x.targetName)+'：<span style="color:var(--gold)">'+esc(x.result)+'</span>';}).join('<br>')+'</div>') : "";
+  return '<div class="card role-card">'+
+    '<div class="row" style="justify-content:space-between">'+
+      '<div><div class="rname">你的身份：'+r.name+'</div><div class="rteam '+r.team+'">'+({wolf:"狼人阵营",god:"好人阵营 · 神",villager:"好人阵营 · 民"}[r.team])+'</div></div>'+
+      '<div class="pill">座位 '+mp.seat+'</div>'+
+    '</div>'+
+    '<p>'+r.desc+'</p>'+extra+pinfoHtml+
+  '</div>';
+}
+
+function renderLog(g){
+  var items = g.log.slice(-30).reverse().map(function(t){ return '<div>'+esc(t)+'</div>'; }).join("");
+  return '<div class="card"><h3 style="font-size:14px;margin-bottom:8px">场记</h3><div class="log">'+items+'</div></div>';
+}
+
+/* ---- 各阶段主体 ---- */
+
+function renderPhaseBody(g, mp, isSpectator){
+  if(g.phase==="ended") return "";
+  if(g.awaitingHunter){
+    return renderHunterPanel(g, mp);
+  }
+  if(g.phase==="night") return renderNightPanel(g, mp, isSpectator);
+  if(g.phase==="day_announce") return renderAnnouncePanel(g);
+  if(g.phase==="day_discuss") return renderDiscussPanel(g, mp, isSpectator);
+  if(g.phase==="day_vote") return renderVotePanel(g, mp, isSpectator);
+  return "";
+}
+
+function timerHtml(deadline, totalMs){
+  if(!deadline) return "";
+  var left = deadline - Date.now();
+  var pct = Math.max(0, Math.min(100, (left/totalMs)*100));
+  return '<div class="timerbar"><div style="width:'+pct+'%"></div></div><div class="muted" style="font-size:11.5px;margin-top:4px">剩余 '+fmtTime(left)+'</div>';
+}
+
+function renderAnnouncePanel(g){
+  var recent = g.nightLog && g.nightLog.length ? g.nightLog : g.log;
+  var newLines = recent.slice(g.log.length - Math.max(0,recent.length)); // 简化：直接展示最近日志
+  var bearText = g.bearRoar===null ? "" : ('<div class="banner '+(g.bearRoar?"wolf":"good")+'" style="margin-top:10px">🐻 '+(g.bearRoar?"熊咆哮了！它的一侧存活着狼人。":"熊没有咆哮，两侧看起来都很安全。")+'</div>');
+  return '<div class="card"><h3>清晨播报</h3>'+
+    '<div class="log">'+g.log.slice(-8).map(function(t){return '<div>'+esc(t)+'</div>';}).join("")+'</div>'+
+    bearText+
+    '<p class="muted" style="margin-top:10px;font-size:12.5px">即将自动进入白天讨论……</p>'+
+  '</div>';
+}
+
+function renderNightPanel(g, mp, isSpectator){
+  var body = timerHtml(g.deadline, NIGHT_MS);
+  if(isSpectator || !mp || !mp.alive){
+    return '<div class="card"><h3>黑夜降临</h3><p class="muted">场上的人正在暗中行动……</p>'+body+'</div>';
+  }
+  var round = g.round;
+  var already = {};
+  ["kill","inspect","mimic","mimicact","witch","seer","mirror","dream","crush"].forEach(function(k){
+    already[k] = (g.pending && g.pending[k] || []).indexOf(mp.id)!==-1;
+  });
+  var actionsHtml = "";
+
+  // 狼队：袭击目标（石像鬼x2、隐狼 均参与）
+  if(teamOf(mp.role)==="wolf"){
+    actionsHtml += renderActionBlock(g, mp, "选择今晚的袭击目标", "kill", already.kill,
+      alivePlayers(g).filter(function(p){return p.id!==mp.id;}), true,
+      function(target){ submitNightAction("kill", {target: target||"skip"}); });
+  }
+  // 石像鬼：查验
+  if(mp.role==="gargoyle"){
+    actionsHtml += renderActionBlock(g, mp, "查验一名玩家的具体身份", "inspect", already.inspect,
+      alivePlayers(g).filter(function(p){return p.id!==mp.id;}), true,
+      function(target){ submitNightAction("inspect", {target: target||null}); });
+  }
+  // 隐狼：模仿 / 已模仿后的行动
+  if(mp.role==="hiddenwolf" && g.hiddenWolf){
+    if(!g.hiddenWolf.mimicLocked){
+      actionsHtml += renderActionBlock(g, mp, "选择一名玩家进行模仿（可跳过）", "mimic", already.mimic,
+        alivePlayers(g).filter(function(p){return p.id!==mp.id;}), true,
+        function(target){ submitNightAction("mimic", {target: target||null}); });
+    } else {
+      var mr = g.hiddenWolf.mimicRole;
+      if(mr==="seer" || mr==="mirror"){
+        actionsHtml += renderActionBlock(g, mp, "使用模仿来的查验能力", "mimicact", already.mimicact,
+          alivePlayers(g).filter(function(p){return p.id!==mp.id;}), true,
+          function(target){ submitNightAction("mimicact", {target: target||null}); });
+      } else if(mr==="witch" && !g.hiddenWolf.poisonUsed){
+        actionsHtml += renderPoisonOnlyBlock(g, mp, already.mimicact);
+      } else if(mr!=="hunter" && !g.hiddenWolf.bonusKillUsed){
+        actionsHtml += renderActionBlock(g, mp, "使用模仿来的一次性额外袭击", "mimicact", already.mimicact,
+          alivePlayers(g).filter(function(p){return p.id!==mp.id;}), true,
+          function(target){ submitNightAction("mimicact", {type:"kill", target: target||null}); },
+          {allowSkipEmpty:true});
+      } else {
+        actionsHtml += '<div class="banner info">你今晚没有额外可发动的技能。</div>';
+      }
+    }
+  }
+  // 预言家
+  if(mp.role==="seer"){
+    actionsHtml += renderActionBlock(g, mp, "查验一名玩家的阵营", "seer", already.seer,
+      alivePlayers(g).filter(function(p){return p.id!==mp.id;}), false,
+      function(target){ submitNightAction("seer", {target: target}); });
+  }
+  // 魔镜少女
+  if(mp.role==="mirror"){
+    actionsHtml += renderActionBlock(g, mp, "查验一名玩家的具体身份", "mirror", already.mirror,
+      alivePlayers(g).filter(function(p){return p.id!==mp.id;}), false,
+      function(target){ submitNightAction("mirror", {target: target}); });
+  }
+  // 女巫
+  if(mp.role==="witch"){
+    actionsHtml += renderWitchBlock(g, mp, already.witch);
+  }
+  // 猎人：夜间无行动
+  if(mp.role==="hunter"){
+    actionsHtml += '<div class="banner info">猎人夜晚不需要行动，安心睡觉。若你死亡（非中毒），可以开枪带走一人。</div>';
+  }
+  // 摄梦人
+  if(mp.role==="dreamweaver"){
+    actionsHtml += renderActionBlock(g, mp, "选择今晚的梦游者", "dream", already.dream,
+      alivePlayers(g).filter(function(p){return p.id!==mp.id;}), false,
+      function(target){ submitNightAction("dream", {target: target}); });
+  }
+  // 暗恋者：仅第一夜
+  if(mp.role==="admirer" && round===1){
+    actionsHtml += renderActionBlock(g, mp, "选择你暗恋的对象（仅本次可选）", "crush", already.crush,
+      g.players.filter(function(p){return p.id!==mp.id;}), false,
+      function(target){ submitNightAction("crush", {target: target}); });
+  }
+  // 熊 / 白猫 / 河豚 / 暗恋者(非首夜) 无夜间行动
+  if(["bear","whitecat","pufferfish"].indexOf(mp.role)!==-1 || (mp.role==="admirer" && round>1)){
+    actionsHtml += '<div class="banner info">你今晚没有主动技能，安心等待天亮。</div>';
+  }
+
+  return '<div class="card"><h3>黑夜行动</h3>'+body+actionsHtml+'</div>';
+}
+
+function renderActionBlock(g, mp, title, kind, already, candidates, allowSkip, onConfirm, opts){
+  opts = opts||{};
+  if(already){
+    return '<div class="banner good" style="margin-top:10px">✔ '+title+' —— 已提交，等待其他人。</div>';
+  }
+  var pickerId = "picker_"+kind;
+  var options = candidates.map(function(p){
+    var sel = App.selectedTarget===p.id;
+    return '<button class="btn btn-sm'+(sel?" btn-gold":"")+'" onclick="App.selectTarget(\''+p.id+'\')">'+p.seat+'号 '+esc(p.name)+'</button>';
+  }).join("");
+  window.__actionHandlers = window.__actionHandlers || {};
+  window.__actionHandlers[kind] = onConfirm;
+  return '<div style="margin-top:12px">'+
+    '<div class="label">'+title+'</div>'+
+    '<div class="row" style="margin-bottom:8px">'+options+'</div>'+
+    '<div class="row">'+
+      '<button class="btn btn-gold btn-sm" onclick="App.confirmAction(\''+kind+'\')" '+(!allowSkip?'':'')+'>确认</button>'+
+      (allowSkip?'<button class="btn btn-sm btn-ghost" onclick="App.confirmAction(\''+kind+'\', true)">跳过</button>':'')+
+    '</div>'+
+  '</div>';
+}
+
+function renderPoisonOnlyBlock(g, mp, already){
+  if(already){ return '<div class="banner good" style="margin-top:10px">✔ 已提交，等待其他人。</div>'; }
+  var candidates = alivePlayers(g).filter(function(p){return p.id!==mp.id;});
+  var options = candidates.map(function(p){
+    var sel = App.selectedTarget===p.id;
+    return '<button class="btn btn-sm'+(sel?" btn-gold":"")+'" onclick="App.selectTarget(\''+p.id+'\')">'+p.seat+'号 '+esc(p.name)+'</button>';
+  }).join("");
+  window.__actionHandlers = window.__actionHandlers || {};
+  window.__actionHandlers["mimicact_poison"] = function(target){ submitNightAction("mimicact", {type:"poison", target: target||null}); };
+  return '<div style="margin-top:12px"><div class="label">使用模仿来的毒药（一次性）</div>'+
+    '<div class="row" style="margin-bottom:8px">'+options+'</div>'+
+    '<div class="row">'+
+      '<button class="btn btn-gold btn-sm" onclick="App.confirmAction(\'mimicact_poison\')">下毒</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="App.confirmAction(\'mimicact_poison\', true)">不使用</button>'+
+    '</div></div>';
+}
+
+function renderWitchBlock(g, mp, already){
+  if(already){ return '<div class="banner good" style="margin-top:10px">✔ 已提交，等待其他人。</div>'; }
+  var pot = g.witchPotions[mp.id]||{};
+  var killedTonightHint = "你会在提交后得知今晚是否有人被袭击。";
+  window.__actionHandlers = window.__actionHandlers || {};
+  window.__actionHandlers["witch"] = function(target){
+    if(App.witchChoice==="heal") submitNightAction("witch", {type:"heal", target: target});
+    else if(App.witchChoice==="poison") submitNightAction("witch", {type:"poison", target: target});
+    else submitNightAction("witch", {type:"pass"});
+  };
+  var candidates = alivePlayers(g).filter(function(p){return p.id!==mp.id;});
+  var options = candidates.map(function(p){
+    var sel = App.selectedTarget===p.id;
+    return '<button class="btn btn-sm'+(sel?" btn-gold":"")+'" onclick="App.selectTarget(\''+p.id+'\')">'+p.seat+'号 '+esc(p.name)+'</button>';
+  }).join("");
+  return '<div style="margin-top:12px"><div class="label">今晚使用哪瓶药？（不能自救）</div>'+
+    '<div class="row" style="margin-bottom:8px">'+
+      (pot.heal?'<button class="btn btn-sm'+(App.witchChoice==="heal"?" btn-gold":"")+'" onclick="App.setWitchChoice(\'heal\')">💧 解药（救本回合被袭击者）</button>':'<span class="tag">解药已用</span>')+
+      (pot.poison?'<button class="btn btn-sm'+(App.witchChoice==="poison"?" btn-gold":"")+'" onclick="App.setWitchChoice(\'poison\')">☠ 毒药</button>':'<span class="tag">毒药已用</span>')+
+    '</div>'+
+    (App.witchChoice ? ('<div class="row" style="margin-bottom:8px">'+options+'</div>') : '<p class="muted" style="font-size:12px">'+killedTonightHint+'</p>')+
+    '<div class="row">'+
+      (App.witchChoice?'<button class="btn btn-gold btn-sm" onclick="App.confirmAction(\'witch\')">确认使用</button>':'')+
+      '<button class="btn btn-sm btn-ghost" onclick="App.confirmAction(\'witch\', true)">本回合不使用药水</button>'+
+    '</div></div>';
+}
+
+function renderHunterPanel(g, mp){
+  var isMe = mp && mp.id===g.awaitingHunter;
+  var hp = byId(g, g.awaitingHunter);
+  if(!isMe){
+    return '<div class="card"><h3>猎人抉择中……</h3><p class="muted">'+(hp?esc(hp.name):"猎人")+' 正在决定是否开枪带走一名玩家。</p></div>';
+  }
+  var candidates = alivePlayers(g).filter(function(p){return p.id!==mp.id;});
+  var options = candidates.map(function(p){
+    var sel = App.selectedTarget===p.id;
+    return '<button class="btn btn-sm'+(sel?" btn-gold":"")+'" onclick="App.selectTarget(\''+p.id+'\')">'+p.seat+'号 '+esc(p.name)+'</button>';
+  }).join("");
+  window.__actionHandlers = window.__actionHandlers || {};
+  window.__actionHandlers["hunter_shot"] = function(target){ submitHunterShot(target); };
+  return '<div class="card"><h3>💥 你可以开枪了</h3><p class="muted">你即将离场，可以选择开枪带走一名玩家，也可以放弃。</p>'+
+    '<div class="row" style="margin:10px 0">'+options+'</div>'+
+    '<div class="row">'+
+      '<button class="btn btn-wolf btn-sm" onclick="App.confirmAction(\'hunter_shot\')">开枪</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="App.confirmAction(\'hunter_shot\', true)">放弃</button>'+
+    '</div></div>';
+}
+
+function renderDiscussPanel(g, mp, isSpectator){
+  var body = timerHtml(g.deadline, DISCUSS_MS);
+  var chatHtml = App.chat.map(function(m){
+    var isMe = m.pid===App.myId;
+    return '<div class="msg'+(isMe?" me":"")+'"><span class="who">'+esc(m.name)+'：</span><span class="txt">'+esc(m.text)+'</span></div>';
+  }).join("");
+  return '<div class="card"><h3>白天讨论</h3>'+body+
+    '<div class="chatbox" id="chatbox">'+(chatHtml||'<span class="muted">还没有人发言……</span>')+'</div>'+
+    (isSpectator ? '' : '<div class="row" style="margin-top:10px"><input type="text" id="chatInput" placeholder="说点什么…" onkeydown="if(event.key===\'Enter\'){App.doSendChat();}"/><button class="btn btn-sm btn-gold" onclick="App.doSendChat()">发送</button></div>')+
+    '<div class="divider"></div>'+
+    '<button class="btn btn-sm" onclick="App.forceStartVote()">提前进入投票</button>'+
+  '</div>';
+}
+
+function renderVotePanel(g, mp, isSpectator){
+  var body = timerHtml(g.deadline, VOTE_MS);
+  if(isSpectator || !mp || !mp.alive){
+    return '<div class="card"><h3>投票中……</h3>'+body+'<p class="muted">存活玩家正在投票。</p></div>';
+  }
+  var candidates = alivePlayers(g).filter(function(p){return p.id!==mp.id;});
+  var options = candidates.map(function(p){
+    var sel = App.selectedTarget===p.id;
+    return '<button class="btn btn-sm'+(sel?" btn-wolf":"")+'" onclick="App.selectTarget(\''+p.id+'\')">'+p.seat+'号 '+esc(p.name)+'</button>';
+  }).join("");
+  window.__actionHandlers = window.__actionHandlers || {};
+  window.__actionHandlers["vote"] = function(target){ submitVote(target || "abstain"); };
+  return '<div class="card"><h3>投票放逐</h3>'+body+
+    '<div class="row" style="margin:10px 0">'+options+'</div>'+
+    '<div class="row">'+
+      '<button class="btn btn-wolf btn-sm" onclick="App.confirmAction(\'vote\')">投票放逐</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="App.confirmAction(\'vote\', true)">弃票</button>'+
+    '</div></div>';
+}
+
+function renderEndScreen(g){
+  var winnerText = g.winner==="good" ? "🌅 好人阵营 获胜" : "🐺 狼人阵营 获胜";
+  var rows = g.players.slice().sort(function(a,b){return a.seat-b.seat;}).map(function(p){
+    var r = ROLES[p.role];
+    var mimic = (isHiddenWolf(g,p.id) && g.hiddenWolf.mimicLocked) ? '（曾模仿 '+ROLES[g.hiddenWolf.mimicRole].name+'）' : '';
+    return '<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)">'+
+      '<span>'+p.seat+'号 '+esc(p.name)+'</span>'+
+      '<span class="tag '+r.team+'">'+r.name+mimic+'</span>'+
+      '<span class="muted" style="font-size:12px">'+(p.alive?"存活":"出局")+'</span>'+
+    '</div>';
+  }).join("");
+  var admirerNote = "";
+  if(g.admirerCrushId){
+    var admirer = g.players.find(function(p){return p.role==="admirer";});
+    var crush = byId(g, g.admirerCrushId);
+    if(admirer && crush){
+      var crushTeam = teamOf(crush.role);
+      var admirerWon = (crushTeam==="wolf" && g.winner==="wolf") || (crushTeam!=="wolf" && g.winner==="good");
+      admirerNote = '<div class="banner info" style="margin-top:10px">💌 暗恋者 '+esc(admirer.name)+' 暗恋着 '+esc(crush.name)+'（'+ROLES[crush.role].name+'）——'+(admirerWon?"心愿达成！":"未能如愿。")+'</div>';
+    }
+  }
+  return '<div class="card"><h2 class="'+(g.winner==="wolf"?"":"")+'" style="color:var(--gold)">'+winnerText+'</h2>'+
+    admirerNote+
+    '<div class="divider"></div>'+
+    '<h3 style="font-size:14px">全员身份揭晓</h3>'+rows+
+    '<div class="divider"></div>'+
+    '<button class="btn btn-gold" onclick="App.playAgain()">再来一局（返回大厅）</button>'+
+  '</div>';
+}
+
+/* ============================== 事件处理（挂到 App） ============================== */
+
+App.onNameInput = function(v){ App.myName = v; };
+App.createRoom = createRoom;
+App.joinRoom = joinRoom;
+App.leaveLobby = leaveLobby;
+App.startGame = startGame;
+App.toggleRules = function(){ App.showRules=!App.showRules; render(); };
+App.pickTarget = function(id){ App.selectedTarget = id; render(); };
+App.selectTarget = function(id){ App.selectedTarget = (App.selectedTarget===id? null : id); render(); };
+App.setWitchChoice = function(c){ App.witchChoice = c; App.selectedTarget=null; render(); };
+App.confirmAction = function(kind, skip){
+  var t = skip ? null : App.selectedTarget;
+  if(!skip && !t){ toast("请先选择一名玩家，或点击跳过/弃票"); return; }
+  var handler = window.__actionHandlers && window.__actionHandlers[kind];
+  if(handler) handler(t);
+};
+App.doSendChat = function(){
+  var el = document.getElementById("chatInput");
+  if(el) sendChat(el.value);
+};
+App.forceStartVote = async function(){
+  var g = await sGetJSON("game:"+App.room, true);
+  if(!g || g.phase!=="day_discuss") return;
+  g.phase="day_vote"; g.deadline=Date.now()+VOTE_MS; g.updatedAt=Date.now(); g.v=(g.v||0)+1;
+  await sSetJSON("game:"+App.room, g, true);
+  App.game=g; render();
+};
+App.playAgain = function(){
+  App.screen="landing"; App.room=null; App.game=null; App.selectedTarget=null; App.witchChoice=null;
+  render();
+};
+
+window.App = App;
+boot();
+
+})();
+</script>
+</body>
+</html>

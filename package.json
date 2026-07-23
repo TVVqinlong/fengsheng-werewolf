@@ -1,0 +1,20 @@
+{
+  "name": "fengsheng-werewolf",
+  "version": "1.0.0",
+  "description": "网易狼人杀·风声谍影 12人在线对局",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js"
+  },
+  "keywords": ["werewolf", "狼人杀", "风声谍影"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

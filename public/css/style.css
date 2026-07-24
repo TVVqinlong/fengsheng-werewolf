@@ -702,6 +702,31 @@ select:focus {
   border-radius: 12px;
 }
 
+.role-list .role-sheet-item.has-avatar {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.role-sheet-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 1.5px solid var(--gold-dim);
+  background: #1a1530;
+  display: block;
+}
+
+.role-sheet-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem;
+}
+
 .role-list strong {
   color: var(--ink);
   font-family: var(--font-display);
@@ -881,14 +906,56 @@ select:focus {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.15rem;
+  gap: 0.35rem;
   font-weight: 600;
+}
+
+.game-timer-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.game-timer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
 }
 
 #timer-text {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
   color: var(--gold);
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  margin-bottom: 0.55rem;
+}
+
+.drawer-head .drawer-title {
+  margin: 0;
+}
+
+/* 桌面：身份栏自有标题，不显示抽屉头 */
+.me-panel > .drawer-head {
+  display: none;
+}
+
+.drawer-close {
+  display: none;
+  flex-shrink: 0;
+}
+
+.mobile-dock,
+.mobile-drawer-backdrop {
+  display: none;
 }
 
 .game-layout {
@@ -920,6 +987,14 @@ select:focus {
   flex-direction: column;
 }
 
+.me-panel > #side-lobby,
+.me-panel > #side-game {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .me-panel .my-role {
   flex: 0 1 auto;
   max-height: 42%;
@@ -933,7 +1008,9 @@ select:focus {
   margin-top: 0.6rem;
 }
 
-.chat-panel h3 {
+.chat-panel h3,
+.me-panel > h3,
+.me-panel .drawer-head {
   flex: 0 0 auto;
 }
 
@@ -980,11 +1057,45 @@ select:focus {
   padding: 1rem;
 }
 
+.my-role.has-portrait {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.75rem;
+}
+
+.my-role .role-portrait-wrap {
+  width: 88px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--gold-dim);
+  background: radial-gradient(ellipse at 50% 20%, #3a2f5c, #120e22 70%);
+  flex-shrink: 0;
+}
+
+.my-role .role-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.my-role .role-meta {
+  min-width: 0;
+}
+
 .my-role .role-name {
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--gold);
+}
+
+.my-role.has-portrait .role-name {
+  font-size: 1.15rem;
 }
 
 .my-role .role-camp {
@@ -1009,6 +1120,12 @@ select:focus {
   font-size: 0.84rem;
   line-height: 1.65;
   color: var(--ink-soft);
+}
+
+.my-role.has-portrait .role-desc {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .private-info {
@@ -1365,6 +1482,82 @@ body.scene-dawn .table-felt {
   position: relative;
 }
 
+.player-token.has-role-art .avatar {
+  padding: 0;
+  border-color: var(--gold-dim);
+}
+
+.player-token .token-role-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  pointer-events: none;
+}
+
+.player-token .check-mark {
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  transform: translateX(-50%);
+  z-index: 4;
+  min-width: 1.35rem;
+  max-width: 3.6rem;
+  padding: 0.08rem 0.28rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.player-token .check-mark-village {
+  color: #0d2818;
+  background: linear-gradient(180deg, #b7f0c8, #5fbf7a);
+  border-color: #2f6b42;
+}
+
+.player-token .check-mark-wolf {
+  color: #2a0a0a;
+  background: linear-gradient(180deg, #f3a0a0, #c44545);
+  border-color: #7a2020;
+}
+
+.player-token .check-mark-role {
+  bottom: -7px;
+  max-width: 4.8rem;
+  padding: 0.1rem 0.32rem;
+  color: #1c1408;
+  background: linear-gradient(180deg, #f0d78a, #c9a227);
+  border-color: #8a6d1a;
+  font-size: 0.52rem;
+  letter-spacing: 0;
+  border-radius: 6px;
+}
+
+.player-token .check-mark-public {
+  background: linear-gradient(180deg, #f3a0a0, #c44545);
+  border-color: #7a2020;
+  color: #2a0a0a;
+}
+
+.player-token.exploded .t-tag {
+  color: #e07070;
+}
+
+.player-token.has-check-mark .t-name {
+  margin-top: 0.15rem;
+}
+
 .player-token .mic-badge {
   position: absolute;
   right: -4px;
@@ -1497,6 +1690,53 @@ body.scene-dawn .table-felt {
   box-shadow: 0 0 0 4px rgba(211, 169, 92, 0.25);
 }
 
+/* 投票阶段：可投目标点亮，其余压暗 */
+#player-circle.is-voting .player-token.vote-dim .avatar {
+  opacity: 0.38;
+  filter: grayscale(0.55) brightness(0.75);
+  box-shadow: none;
+}
+
+#player-circle.is-voting .player-token.vote-dim .t-name,
+#player-circle.is-voting .player-token.vote-dim .t-tag {
+  opacity: 0.45;
+}
+
+.player-token.vote-lit .avatar {
+  border-color: #e8c57a;
+  box-shadow:
+    0 0 0 3px rgba(232, 197, 122, 0.45),
+    0 0 20px rgba(211, 169, 92, 0.55);
+  animation: voteLitPulse 1.5s ease-in-out infinite;
+}
+
+.player-token.vote-lit .t-tag {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.player-token.vote-lit.selected .avatar {
+  border-color: #fff1c2;
+  box-shadow:
+    0 0 0 4px rgba(255, 241, 194, 0.55),
+    0 0 26px rgba(211, 169, 92, 0.7);
+  animation: none;
+}
+
+@keyframes voteLitPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(232, 197, 122, 0.4),
+      0 0 14px rgba(211, 169, 92, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(232, 197, 122, 0.65),
+      0 0 26px rgba(211, 169, 92, 0.7);
+  }
+}
+
 .player-token.me .avatar {
   border-color: var(--violet);
   box-shadow: 0 0 0 3px rgba(138, 124, 255, 0.18);
@@ -1560,6 +1800,7 @@ body.scene-dawn .table-felt {
   align-items: center;
   justify-content: center;
   color: var(--ink-faint);
+  z-index: 2;
 }
 
 .player-token .t-name {
@@ -1597,6 +1838,10 @@ body.scene-dawn .table-felt {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.action-bar[hidden] {
+  display: none !important;
 }
 
 .action-bar .hint-text {
@@ -1671,43 +1916,467 @@ body.scene-dawn .table-felt {
   padding: 1rem 1.2rem;
 }
 
+.end-roles .end-role-row,
 .end-roles div {
   display: flex;
   justify-content: space-between;
-  padding: 0.45rem 0;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0;
   border-bottom: 1px solid var(--line);
   font-size: 0.92rem;
 }
 
-.end-roles div:last-child {
+.end-roles .end-role-row.has-avatar {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  justify-content: stretch;
+}
+
+.end-role-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 1.5px solid var(--gold-dim);
+  background: #1a1530;
+}
+
+.end-role-who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.end-role-name {
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.end-roles div:last-child,
+.end-roles .end-role-row:last-child {
   border-bottom: none;
 }
 
+/* 身份揭晓弹层 */
+.role-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.role-reveal[hidden] {
+  display: none !important;
+}
+
+.role-reveal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 4, 14, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.role-reveal-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 360px);
+  max-height: min(92dvh, 720px);
+  overflow: auto;
+  text-align: center;
+  padding: 1.35rem 1.25rem 1.25rem;
+  border-radius: 20px;
+  border: 1px solid var(--gold-dim);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(211, 169, 92, 0.16), transparent 55%),
+    linear-gradient(165deg, #2a2148 0%, #141022 55%, #0e0b18 100%);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  animation: roleRevealIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes roleRevealIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.role-reveal-kicker {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.role-reveal-art {
+  width: min(72%, 220px);
+  aspect-ratio: 3 / 4;
+  margin: 0 auto 1rem;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(211, 169, 92, 0.35);
+  background: radial-gradient(ellipse at 50% 18%, #4a3a6e, #120e22 72%);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+}
+
+.role-reveal-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  animation: roleArtFade 0.7s ease both;
+}
+
+@keyframes roleArtFade {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.role-reveal-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.role-reveal-camp {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.role-reveal-camp.wolf {
+  color: var(--wolf);
+}
+
+.role-reveal-camp.village {
+  color: var(--good);
+}
+
+.role-reveal-desc {
+  margin: 0.85rem 0 1.15rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  text-align: left;
+}
+
+.role-reveal-card .btn {
+  min-width: 8rem;
+}
+
+body.role-reveal-open {
+  overflow: hidden;
+}
+
+/* 平板：侧栏收成抽屉，圆桌占主区 */
 @media (max-width: 960px) {
-  .view-game .game-layout {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(140px, 32%);
-  }
-
-  .view-game .me-panel {
-    display: none;
-  }
-
-  .view-game .table-panel {
-    grid-column: 1 / -1;
-  }
-
-  .view-game .chat-panel {
-    grid-column: 1 / -1;
-  }
-
   .hero {
     padding-top: 2.2rem;
   }
 
+  .view-game {
+    padding-top: max(0.55rem, env(safe-area-inset-top, 0px));
+    padding-bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 三栏叠同一格：抽屉脱离文档流后不再挤占主区行高 */
+  .view-game .game-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+    height: auto; /* 避免 height:100% 撑进底栏安全区，把按钮压到 Dock 下面 */
+  }
+
+  .view-game .me-panel,
+  .view-game .table-panel,
+  .view-game .chat-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .view-game .table-panel {
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+    /* 手机：主区可上下滑；底部留出固定操作栏空间 */
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    scroll-padding-bottom: 6rem;
+    padding-bottom: 5.5rem;
+  }
+
+  .view-game .voice-bar,
+  .view-game .announce-sub,
+  .view-game .lobby-controls,
+  .view-game .action-bar {
+    flex: 0 0 auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .view-game .table-wrap {
+    flex: 0 0 auto;
+    max-height: none;
+  }
+
+  /*
+   * 操作栏固定在底部 Dock 上方（准备/开始/填充电脑等），
+   * 避免 sticky 落在 Dock 下面导致房主按钮「消失」。
+   */
+  .view-game .lobby-controls.action-bar,
+  .view-game #action-bar:not([hidden]) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(3.55rem + env(safe-area-inset-bottom, 0px));
+    z-index: 66;
+    margin: 0;
+    padding: 0.55rem 0.7rem;
+    max-height: min(36dvh, 220px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: linear-gradient(180deg, rgba(28, 24, 50, 0.98), rgba(15, 13, 26, 0.99));
+    border-top: 1px solid var(--line);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.4);
+  }
+
+  body.keyboard-open .view-game .lobby-controls.action-bar,
+  body.keyboard-open .view-game #action-bar:not([hidden]),
+  body.drawer-info-open .view-game .lobby-controls.action-bar,
+  body.drawer-info-open .view-game #action-bar:not([hidden]),
+  body.drawer-chat-open .view-game .lobby-controls.action-bar,
+  body.drawer-chat-open .view-game #action-bar:not([hidden]) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .view-game .lobby-controls.action-bar {
+    border-top-color: var(--line);
+  }
+
+  .view-game .me-panel,
+  .view-game .chat-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--kb-inset, 0px);
+    z-index: 80;
+    width: 100%;
+    max-width: 100%;
+    height: min(72dvh, 560px, var(--vv-height, 100dvh));
+    max-height: calc(var(--vv-height, 100dvh) - 0.75rem);
+    margin: 0;
+    border-radius: 18px 18px 0 0;
+    padding: 0.85rem 0.9rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+    transform: translateY(110%);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), bottom 0.15s ease, max-height 0.15s ease, height 0.15s ease;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  body.keyboard-open.drawer-chat-open .view-game .chat-panel,
+  body.keyboard-open.drawer-info-open .view-game .me-panel {
+    height: calc(var(--vv-height, 100dvh) - 0.5rem);
+    max-height: calc(var(--vv-height, 100dvh) - 0.5rem);
+    padding-bottom: 0.75rem;
+    border-radius: 14px 14px 0 0;
+  }
+
+  body.keyboard-open .mobile-dock {
+    display: none;
+  }
+
+  .view-game .chat-panel .chat-form {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding-top: 0.35rem;
+    background: linear-gradient(180deg, rgba(22, 18, 40, 0), rgba(22, 18, 40, 0.96) 35%, rgba(22, 18, 40, 1));
+  }
+
+  .view-game .drawer-head,
+  .view-game .me-panel > .drawer-head {
+    display: flex;
+  }
+
+  .view-game .drawer-close {
+    display: inline-flex;
+  }
+
+  .view-game #side-lobby > h3,
+  .view-game #side-game > h3 {
+    display: none;
+  }
+
+  body.drawer-info-open .view-game .me-panel,
+  body.drawer-chat-open .view-game .chat-panel {
+    transform: translateY(0);
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .mobile-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgba(8, 6, 16, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+
+  body.drawer-info-open .mobile-drawer-backdrop,
+  body.drawer-chat-open .mobile-drawer-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobile-dock {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 65;
+    gap: 0.45rem;
+    padding: 0.45rem 0.65rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(22, 18, 40, 0.92), rgba(15, 13, 26, 0.98));
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobile-dock-btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel2);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-dock-btn:active {
+    border-color: var(--gold-dim);
+    background: #2a2448;
+  }
+
+  body.drawer-info-open .mobile-dock-btn[data-open-drawer="info"],
+  body.drawer-chat-open .mobile-dock-btn[data-open-drawer="chat"] {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+
+  .game-top {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .game-brand {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .game-timer {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .game-timer-meta {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    width: 100%;
+  }
+
+  .game-timer-actions {
+    justify-content: flex-start;
+  }
+
   .table-wrap {
-    width: min(100%, 46dvh, 360px);
-    max-height: min(46dvh, 100%);
+    width: min(88vw, 46dvh, 380px);
+  }
+
+  .action-bar {
+    max-height: none;
+  }
+
+  .action-bar .btn,
+  .lobby-controls .btn {
+    min-height: 44px;
+  }
+
+  .action-bar .btn-confirm-vote {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .voice-bar {
+    gap: 0.3rem;
+  }
+
+  .voice-bar .btn {
+    flex: 0 1 auto;
+  }
+
+  .conn-status,
+  .admin-badge,
+  .btn-home {
+    top: max(0.45rem, env(safe-area-inset-top, 0px));
+  }
+
+  .conn-status {
+    right: max(0.45rem, env(safe-area-inset-right, 0px));
+  }
+
+  .admin-badge {
+    left: max(0.45rem, env(safe-area-inset-left, 0px));
+  }
+
+  /* 对局中隐藏首页浮钮，避免压住顶栏（可用「退出房间」） */
+  body.in-game .btn-home {
+    display: none;
   }
 }
 
@@ -1719,26 +2388,56 @@ body.scene-dawn .table-felt {
 
   .view-room,
   .view-game {
-    padding: 0.4rem 0.5rem 0.5rem;
+    padding: 0.35rem 0.45rem 0.45rem;
+    padding-top: max(0.35rem, env(safe-area-inset-top, 0px));
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .brand-sm {
+    font-size: 0.95rem;
+  }
+
+  .game-top {
+    padding: 0.55rem 0.7rem;
+    margin-bottom: 0.35rem;
   }
 
   .table-wrap {
-    width: min(100%, 42dvh, 300px);
-    max-height: min(42dvh, 100%);
+    width: min(92vw, 42dvh, 320px);
   }
 
   .player-token {
-    width: 50px;
+    width: 48px;
   }
 
   .player-token .avatar {
-    width: 36px;
-    height: 36px;
-    font-size: 0.85rem;
+    width: 34px;
+    height: 34px;
+    font-size: 0.82rem;
+  }
+
+  .player-token .t-name,
+  .player-token .t-tag {
+    max-width: 56px;
+    font-size: 0.62rem;
   }
 
   .voice-bar .bgm-label {
     display: none;
+  }
+
+  .voice-status {
+    width: 100%;
+    order: 10;
+  }
+
+  .my-role.has-portrait {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .my-role .role-portrait-wrap {
+    width: 64px;
+    height: 88px;
   }
 }
 
@@ -1760,6 +2459,13 @@ body.scene-dawn .table-felt {
   }
 }
 
+@media (max-width: 960px) and (max-height: 760px) {
+  .view-game .table-wrap {
+    width: min(88vw, 40dvh, 340px);
+    max-height: none;
+  }
+}
+
 @media (max-height: 640px) {
   .table-wrap {
     width: min(100%, 38dvh, 320px);
@@ -1769,5 +2475,107 @@ body.scene-dawn .table-felt {
   .brand-emblem {
     width: 64px;
     height: 64px;
+  }
+}
+
+@media (max-width: 960px) and (max-height: 640px) {
+  .view-game .table-wrap {
+    width: min(86vw, 36dvh, 280px);
+    max-height: none;
+  }
+
+  .view-game .voice-bar {
+    padding: 0.3rem 0.4rem;
+  }
+
+  .view-game .game-timer-actions .btn-sm {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* 手机横屏：放在最后，避免被矮屏规则覆盖 */
+@media (max-width: 960px) and (orientation: landscape) {
+  .view-game {
+    padding-top: max(0.3rem, env(safe-area-inset-top, 0px));
+    padding-bottom: calc(2.6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .view-game .game-top {
+    padding: 0.35rem 0.65rem;
+    margin-bottom: 0.3rem;
+    gap: 0.35rem;
+  }
+
+  .view-game .brand-sm {
+    display: none;
+  }
+
+  .view-game .game-timer-actions .btn-sm {
+    min-height: 36px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .view-game .voice-bar {
+    padding: 0.25rem 0.4rem;
+    margin-bottom: 0.25rem;
+    gap: 0.25rem;
+  }
+
+  .view-game .voice-status,
+  .view-game .voice-bar .bgm-label {
+    display: none;
+  }
+
+  .view-game .table-wrap {
+    width: min(42vw, 70dvh, 320px);
+    max-height: none;
+  }
+
+  .view-game .lobby-controls.action-bar,
+  .view-game #action-bar:not([hidden]) {
+    bottom: calc(2.85rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.4rem 0.55rem;
+    max-height: min(42dvh, 160px);
+    border-radius: 10px 10px 0 0;
+  }
+
+  .view-game .action-bar .btn,
+  .view-game .lobby-controls .btn {
+    min-height: 38px;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.85rem;
+  }
+
+  .view-game .table-panel {
+    padding-bottom: 4.5rem;
+  }
+
+  .mobile-dock {
+    padding: 0.28rem 0.5rem calc(0.28rem + env(safe-area-inset-bottom, 0px));
+    gap: 0.35rem;
+  }
+
+  .mobile-dock-btn {
+    min-height: 36px;
+    font-size: 0.8rem;
+  }
+
+  .view-game .me-panel,
+  .view-game .chat-panel {
+    height: min(92dvh, var(--vv-height, 100dvh));
+    max-height: calc(var(--vv-height, 100dvh) - 0.4rem);
+    padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .player-token {
+    width: 44px;
+  }
+
+  .player-token .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.78rem;
   }
 }

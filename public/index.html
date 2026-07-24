@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>风声谍影 · 狼人杀在线</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -100,15 +100,24 @@
         <span id="phase-label" class="phase-pill">等待中</span>
       </div>
       <div class="game-timer">
-        <span id="day-label">房间 -----</span>
-        <span id="timer-text">--</span>
-        <button id="btn-copy" class="btn btn-ghost btn-sm" type="button">复制房间号</button>
-        <button id="btn-leave-game" class="btn btn-ghost btn-sm" type="button">退出房间</button>
+        <div class="game-timer-meta">
+          <span id="day-label">房间 -----</span>
+          <span id="timer-text">--</span>
+        </div>
+        <div class="game-timer-actions">
+          <button id="btn-view-role" class="btn btn-secondary btn-sm" type="button" hidden>我的身份</button>
+          <button id="btn-copy" class="btn btn-ghost btn-sm" type="button">复制房间号</button>
+          <button id="btn-leave-game" class="btn btn-ghost btn-sm" type="button">退出房间</button>
+        </div>
       </div>
     </header>
 
     <div class="game-layout game-layout-table">
-      <aside class="panel me-panel">
+      <aside class="panel me-panel" id="me-panel">
+        <div class="drawer-head">
+          <h3 class="drawer-title">信息</h3>
+          <button type="button" class="btn btn-ghost btn-sm drawer-close" data-close-drawer="info" aria-label="关闭">关闭</button>
+        </div>
         <div id="side-lobby">
           <h3>房间信息</h3>
           <div class="room-side-card">
@@ -191,8 +200,11 @@
         <div class="action-bar" id="action-bar"></div>
       </main>
 
-      <aside class="panel chat-panel">
-        <h3>消息</h3>
+      <aside class="panel chat-panel" id="chat-panel">
+        <div class="drawer-head">
+          <h3 class="drawer-title">消息</h3>
+          <button type="button" class="btn btn-ghost btn-sm drawer-close" data-close-drawer="chat" aria-label="关闭">关闭</button>
+        </div>
         <div id="chat-log" class="chat-log"></div>
         <form id="chat-form" class="chat-form">
           <input id="chat-input" maxlength="200" placeholder="文字补充…" autocomplete="off" />
@@ -200,6 +212,16 @@
         </form>
       </aside>
     </div>
+
+    <div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop" hidden></div>
+    <nav class="mobile-dock" id="mobile-dock" aria-label="对局快捷栏">
+      <button type="button" class="mobile-dock-btn" id="btn-dock-info" data-open-drawer="info">
+        <span class="mobile-dock-label">房间/身份</span>
+      </button>
+      <button type="button" class="mobile-dock-btn" id="btn-dock-chat" data-open-drawer="chat">
+        <span class="mobile-dock-label">消息</span>
+      </button>
+    </nav>
   </section>
 
   <!-- 结束 -->
@@ -213,6 +235,21 @@
       <button id="btn-reload" class="btn btn-ghost" type="button">刷新页面</button>
     </div>
   </section>
+
+  <!-- 身份揭晓 / 查看身份 -->
+  <div id="role-reveal" class="role-reveal" hidden>
+    <div class="role-reveal-backdrop" data-close-reveal></div>
+    <div class="role-reveal-card" role="dialog" aria-modal="true" aria-labelledby="reveal-role-name">
+      <p class="role-reveal-kicker">你的身份</p>
+      <div class="role-reveal-art">
+        <img id="reveal-role-img" alt="" />
+      </div>
+      <h2 id="reveal-role-name" class="role-reveal-name">—</h2>
+      <p id="reveal-role-camp" class="role-reveal-camp">—</p>
+      <p id="reveal-role-desc" class="role-reveal-desc"></p>
+      <button id="btn-close-reveal" class="btn btn-primary" type="button">已知晓</button>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/voice.js"></script>

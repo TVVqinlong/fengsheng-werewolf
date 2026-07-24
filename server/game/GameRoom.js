@@ -394,10 +394,28 @@ class GameRoom {
     this.policeChiefId = null;
     this.police.reset();
     this.lastWords.reset();
+    this.markGargoyleTeammates();
     this.addLog('系统', `${getBoard(this.boardId).name}开局，天黑请闭眼…`);
     this.publicAnnouncements = ['天黑了，请闭眼。'];
     this.beginNight();
     return { ok: true };
+  }
+
+  /** 两名觉醒石像鬼开局互认，并在座位上互标对方身份（不知对方转化者） */
+  markGargoyleTeammates() {
+    const gargoyles = this.seatedPlayers().filter((p) => WolfKill.isGargoyle(this, p));
+    const roleName = getRoleMeta('awakened_gargoyle').name;
+    for (const me of gargoyles) {
+      for (const other of gargoyles) {
+        if (me.id === other.id) continue;
+        this.recordCheckMark(me, {
+          seat: other.seat,
+          result: roleName,
+          kind: 'role',
+          night: 0,
+        });
+      }
+    }
   }
 
   /** 终局后回到大厅，房间不解散，可换座再开下一把 */
@@ -463,6 +481,9 @@ class GameRoom {
     }
     this.addLog('系统', `${p.seat} 号【觉醒石像鬼】自爆出局！`);
     this.publicAnnouncements = [`${p.seat} 号觉醒石像鬼自爆！`];
+    // 自爆亮身份：全场可见石像鬼头像/文字，并标记自爆出局
+    p.flags.publicRevealed = true;
+    p.flags.exploded = true;
     this.killPlayer(p, ['explode']);
     this.pendingSkills = this.pendingSkills.filter((s) => s.playerId !== socketId);
     if (this.checkWin()) return { ok: true, exploded: true };
@@ -489,9 +510,10 @@ class GameRoom {
       idol: null,
       dreamTarget: null,
       lastDreamTarget: null,
+      bearAdjSeats: null,
       pufferUsed: false,
-      witchSave: true,
-      witchPoison: true,
+      witchSave: roleId === 'witch',
+      witchPoison: roleId === 'witch',
       hiddenImitate: null,
       hiddenExtraKnife: false,
       hiddenAwakened: false,
@@ -502,6 +524,12 @@ class GameRoom {
       imitateHunter: false,
       imitateMirror: false,
       imitateSeer: false,
+      imitateWhiteCat: false,
+      imitateBear: false,
+      imitateGargoyle: false,
+      imitateDream: false,
+      imitatePuffer: false,
+      imitateAdmirer: false,
       isPoliceChief: false,
     };
     return base;
@@ -535,19 +563,56 @@ class GameRoom {
       witchPoisonTarget: null,
       seerCheck: null,
       mirrorCheck: null,
+      hiddenSeerCheck: null,
+      hiddenMirrorCheck: null,
       lonelyIdol: null,
       hiddenKill: null,
       hiddenExtraKill: null,
       hiddenImitate: null,
       submitted: new Set(),
     };
+    // 熊 / 学熊隐狼：快照入夜前左右邻座（查验重合）
+    this.snapshotBearNeighbors();
     const nightLine =
       this.night === 1
-        ? '天黑了，请闭眼。各身份请按顺序行动。（石像鬼互不相认）'
+        ? '天黑了，请闭眼。各身份请按顺序行动。（石像鬼互认并互标身份，不知对方转化者）'
         : `天黑了，请闭眼。第 ${this.night} 夜开始。`;
     this.addLog('系统', nightLine);
     this.publicAnnouncements = [nightLine];
     this.setPhaseTimer(NIGHT_ACTION_MS, () => this.resolveNight());
+  }
+
+  /** 入夜前记录熊位邻座，供天亮咆哮判定 */
+  snapshotBearNeighbors() {
+    for (const p of this.alivePlayers()) {
+      if (this.hasBearAbility(p)) {
+        p.flags.bearAdjSeats = this.getAdjacentSeats(p.seat);
+      }
+    }
+  }
+
+  hasBearAbility(p) {
+    return this.effectiveRole(p) === 'bear' || !!p.flags?.imitateBear;
+  }
+
+  hasWhiteCatAbility(p) {
+    return (
+      this.effectiveRole(p) === 'white_cat' ||
+      p.flags?.inheritedRole === 'white_cat' ||
+      !!p.flags?.imitateWhiteCat
+    );
+  }
+
+  hasDreamAbility(p) {
+    return this.effectiveRole(p) === 'dream_catcher' || !!p.flags?.imitateDream;
+  }
+
+  hasPufferAbility(p) {
+    return this.effectiveRole(p) === 'pufferfish' || !!p.flags?.imitatePuffer;
+  }
+
+  hasAdmirerAbility(p) {
+    return this.effectiveRole(p) === 'admirer' || !!p.flags?.imitateAdmirer;
   }
 
   /** 玩家提交夜间行动（可多次更新，type=done 表示确认结束） */
@@ -559,19 +624,12 @@ class GameRoom {
     const role = this.effectiveRole(p);
 
     if (action.type === 'done' || action.type === 'skip') {
-      if (role === 'dream_catcher') {
+      if (this.hasDreamAbility(p)) {
         const prev = this.nightState.actions[socketId];
-        if (!prev || prev.type !== 'dream') {
+        const hasDream =
+          prev?.type === 'dream' || (prev?.type === 'hidden_night' && prev.dream != null);
+        if (!hasDream) {
           return { ok: false, error: '摄梦人必须指定梦游者' };
-        }
-      }
-      if (role === 'awakened_gargoyle') {
-        const prev = this.nightState.actions[socketId];
-        const hasCheck =
-          prev?.type === 'gargoyle_check' ||
-          (prev?.type === 'gargoyle_night' && prev.check != null);
-        if (!hasCheck) {
-          return { ok: false, error: '石像鬼请先查验一名玩家' };
         }
       }
       this.nightState.submitted.add(socketId);
@@ -585,7 +643,7 @@ class GameRoom {
     const validated = this.validateNightAction(p, role, action);
     if (!validated.ok) return validated;
 
-    // 石像鬼：查验 + 可选刀人/转化，需合并保存
+    // 石像鬼：可选刀人/转化，需合并保存
     const prev = this.nightState.actions[socketId];
     if (role === 'awakened_gargoyle' && prev && typeof prev === 'object') {
       const mergeGargoyle = (base, act) => {
@@ -594,10 +652,6 @@ class GameRoom {
             ? { ...base }
             : {
                 type: 'gargoyle_night',
-                check:
-                  base?.type === 'gargoyle_check'
-                    ? base.targetSeat
-                    : base?.check ?? null,
                 kill: base?.type === 'wolf_kill' ? base.targetSeat : base?.kill ?? null,
                 convert:
                   base?.type === 'gargoyle_convert'
@@ -605,13 +659,10 @@ class GameRoom {
                     : base?.convert ?? null,
               };
         if (act.type === 'wolf_kill') out.kill = act.targetSeat;
-        if (act.type === 'gargoyle_check') out.check = act.targetSeat;
         if (act.type === 'gargoyle_convert') out.convert = act.targetSeat;
         return out;
       };
-      if (
-        ['wolf_kill', 'gargoyle_check', 'gargoyle_convert'].includes(action.type)
-      ) {
+      if (['wolf_kill', 'gargoyle_convert'].includes(action.type)) {
         this.nightState.actions[socketId] = mergeGargoyle(prev, action);
       } else {
         this.nightState.actions[socketId] = action;
@@ -628,6 +679,8 @@ class GameRoom {
               mirror: prev?.type === 'mirror_check' ? prev.targetSeat : null,
               seer: prev?.type === 'seer_check' ? prev.targetSeat : null,
               poison: prev?.type === 'witch_poison' ? prev.targetSeat : null,
+              dream: prev?.type === 'dream' ? prev.targetSeat : null,
+              idol: prev?.type === 'idol' ? prev.targetSeat : null,
             };
       if (action.type === 'wolf_kill') base.kill = action.targetSeat;
       else if (action.type === 'hidden_imitate') base.imitate = action.targetSeat;
@@ -635,6 +688,8 @@ class GameRoom {
       else if (action.type === 'mirror_check') base.mirror = action.targetSeat;
       else if (action.type === 'seer_check') base.seer = action.targetSeat;
       else if (action.type === 'witch_poison') base.poison = action.targetSeat;
+      else if (action.type === 'dream') base.dream = action.targetSeat;
+      else if (action.type === 'idol') base.idol = action.targetSeat;
       else {
         this.nightState.actions[socketId] = action;
       }
@@ -646,6 +701,8 @@ class GameRoom {
           'mirror_check',
           'seer_check',
           'witch_poison',
+          'dream',
+          'idol',
         ].includes(action.type)
       ) {
         this.nightState.actions[socketId] = base;
@@ -808,11 +865,28 @@ class GameRoom {
   }
 
   isWolfCamp(p) {
-    // 暗恋者屠边按民计算，永不计入狼
-    if (p.roleId === 'admirer' || this.effectiveRole(p) === 'admirer') return false;
+    if (!p) return false;
+    // 暗恋者：未转化按民；转化后进狼队，但偶像为好人时「崇拜优先」仍算好人
+    if (p.roleId === 'admirer' || this.effectiveRole(p) === 'admirer') {
+      if (!(p.flags.converted || p.flags.convertor)) return false;
+      const crush = p.flags.idol != null ? this.getBySeat(p.flags.idol) : null;
+      if (crush && this.isIdolGood(crush)) return false;
+      return true;
+    }
     if (p.flags.becomeWolf) return true;
     if (p.flags.converted || p.flags.convertor) return true;
-    return p.camp === CAMP.WOLF;
+    const role = this.effectiveRole(p);
+    return getRoleMeta(role).camp === CAMP.WOLF || p.camp === CAMP.WOLF;
+  }
+
+  /** 暗恋偶像是否为好人（隐狼算狼；暗恋者偶像按民） */
+  isIdolGood(crush) {
+    if (!crush) return false;
+    const role = this.effectiveRole(crush);
+    if (role === 'awakened_hidden_wolf' || role === 'awakened_gargoyle') return false;
+    if (role === 'admirer') return true;
+    if (crush.flags.converted || crush.flags.convertor) return false;
+    return getRoleMeta(role).camp === CAMP.VILLAGE;
   }
 
   /** 预言家视角 */
@@ -833,14 +907,21 @@ class GameRoom {
 
     switch (action.type) {
       case 'skip':
-        if (role === 'dream_catcher') return { ok: false, error: '摄梦人必须指定梦游者' };
+        if (this.hasDreamAbility(p)) return { ok: false, error: '摄梦人必须指定梦游者' };
         return { ok: true };
       case 'idol':
-        if (role !== 'admirer' || this.night !== 1) return { ok: false, error: '无法指定暗恋对象' };
+        if (role === 'admirer') {
+          if (this.night !== 1) return { ok: false, error: '无法指定暗恋对象' };
+        } else if (p.flags.imitateAdmirer) {
+          // 学暗恋：获技能后任意一夜可选一次
+        } else {
+          return { ok: false, error: '无法指定暗恋对象' };
+        }
+        if (p.flags.idol != null) return { ok: false, error: '已指定过暗恋对象' };
         if (!target || target.id === p.id || !target.alive) return { ok: false, error: '目标无效' };
         return { ok: true };
       case 'dream':
-        if (role !== 'dream_catcher') return { ok: false, error: '非摄梦人' };
+        if (!this.hasDreamAbility(p)) return { ok: false, error: '非摄梦人' };
         if (!target || !target.alive || target.id === p.id) return { ok: false, error: '目标无效' };
         return { ok: true };
       case 'wolf_kill':
@@ -852,10 +933,6 @@ class GameRoom {
         }
         if (!target || !target.alive) return { ok: false, error: '目标无效' };
         if (target.id === p.id) return { ok: false, error: '不能刀自己' };
-        return { ok: true };
-      case 'gargoyle_check':
-        if (role !== 'awakened_gargoyle') return { ok: false, error: '非觉醒石像鬼' };
-        if (!target || !target.alive || target.id === p.id) return { ok: false, error: '目标无效' };
         return { ok: true };
       case 'gargoyle_convert':
         if (role !== 'awakened_gargoyle') return { ok: false, error: '非觉醒石像鬼' };
@@ -905,13 +982,8 @@ class GameRoom {
   }
 
   hiddenCanKill() {
-    // 其余狼人（石像鬼 + 转化者中的“非隐狼狼队”）全部出局
-    const others = [...this.players.values()].filter((x) => {
-      if (!x.alive) return false;
-      if (this.effectiveRole(x) === 'awakened_hidden_wolf') return false;
-      return this.isWolfCamp(x);
-    });
-    return others.length === 0;
+    // 所有觉醒石像鬼与转化者死完后，隐狼才带刀
+    return WolfKill.bothGargoylesDead(this) && WolfKill.aliveConvertors(this).length === 0;
   }
 
   isAdjacentAlive(seatA, seatB) {
@@ -950,13 +1022,15 @@ class GameRoom {
     if (!p || p.isSpectator || !p.alive) return false;
     const role = this.effectiveRole(p);
     if (role === 'admirer' && this.night === 1 && !p.flags.idol) return true;
-    if (role === 'dream_catcher') return true;
+    if (this.hasDreamAbility(p) && role !== 'awakened_hidden_wolf') return true;
     if (role === 'awakened_gargoyle') return true;
     if (role === 'awakened_hidden_wolf') {
       if (!p.flags.hiddenImitate) return true;
       if (this.hiddenCanKill()) return true;
       if (p.flags.imitateMirror || p.flags.imitateSeer) return true;
       if (p.flags.witchPoison) return true;
+      if (p.flags.imitateDream) return true;
+      if (p.flags.imitateAdmirer && p.flags.idol == null) return true;
       return false;
     }
     // 末转化者可刀人时需要夜间行动
@@ -991,9 +1065,13 @@ class GameRoom {
         ns.lonelyIdol = action.targetSeat;
       }
       if (action.type === 'dream') {
-        ns.dreamTarget = action.targetSeat;
+        ns.dreamByActor = ns.dreamByActor || {};
+        ns.dreamByActor[pid] = action.targetSeat;
         if (p.flags.lastDreamTarget === action.targetSeat) {
-          ns.dreamKill = action.targetSeat;
+          ns.dreamKillSeats = ns.dreamKillSeats || [];
+          if (!ns.dreamKillSeats.includes(action.targetSeat)) {
+            ns.dreamKillSeats.push(action.targetSeat);
+          }
         }
         p.flags.dreamTarget = action.targetSeat;
       }
@@ -1008,24 +1086,34 @@ class GameRoom {
         }
         if (action.imitate != null) ns.hiddenImitate = action.imitate;
         if (action.extra != null) ns.hiddenExtraKill = action.extra;
-        if (action.seer != null) ns.seerCheck = action.seer;
-        if (action.mirror != null) ns.mirrorCheck = action.mirror;
+        // 隐狼查验单独存放，避免与真预言家/魔镜少女互相覆盖或串结果
+        if (action.seer != null) ns.hiddenSeerCheck = action.seer;
+        if (action.mirror != null) ns.hiddenMirrorCheck = action.mirror;
         if (action.poison != null) ns.hiddenPoison = action.poison;
+        if (action.dream != null) {
+          ns.dreamByActor = ns.dreamByActor || {};
+          ns.dreamByActor[pid] = action.dream;
+          if (p.flags.lastDreamTarget === action.dream) {
+            ns.dreamKillSeats = ns.dreamKillSeats || [];
+            if (!ns.dreamKillSeats.includes(action.dream)) {
+              ns.dreamKillSeats.push(action.dream);
+            }
+          }
+          p.flags.dreamTarget = action.dream;
+        }
+        if (action.idol != null) {
+          p.flags.idol = action.idol;
+          ns.lonelyIdol = action.idol;
+        }
       }
       if (action.type === 'gargoyle_night') {
         if (action.kill != null && WolfKill.canParticipateWolfKill(this, p)) {
           killVotes[action.kill] = (killVotes[action.kill] || 0) + 1;
         }
-        if (action.check != null) {
-          p.flags._gargoyleCheckSeat = action.check;
-        }
         if (action.convert != null) {
           ns.convertActions = ns.convertActions || [];
           ns.convertActions.push({ fromId: p.id, targetSeat: action.convert });
         }
-      }
-      if (action.type === 'gargoyle_check') {
-        p.flags._gargoyleCheckSeat = action.targetSeat;
       }
       if (action.type === 'gargoyle_convert') {
         ns.convertActions = ns.convertActions || [];
@@ -1103,28 +1191,42 @@ class GameRoom {
         if (targetRole === 'witch') {
           hw.flags.witchSave = false;
           hw.flags.witchPoison = true;
-        }
-        if (targetRole === 'hunter') {
+        } else if (targetRole === 'hunter') {
           hw.flags.imitateHunter = true;
-        }
-        if (targetRole === 'mirror_maiden') {
+        } else if (targetRole === 'mirror_maiden') {
           hw.flags.imitateMirror = true;
-        }
-        if (targetRole === 'seer') {
+        } else if (targetRole === 'seer') {
           hw.flags.imitateSeer = true;
-        }
-        // 模仿狼人角色：成为带刀狼人后可有一次性额外刀（女巫不可见）
-        if (getRoleMeta(targetRole).camp === CAMP.WOLF) {
+        } else if (targetRole === 'white_cat') {
+          hw.flags.imitateWhiteCat = true;
+        } else if (targetRole === 'bear') {
+          hw.flags.imitateBear = true;
+          hw.flags.bearAdjSeats = this.getAdjacentSeats(hw.seat);
+        } else if (targetRole === 'dream_catcher') {
+          hw.flags.imitateDream = true;
+        } else if (targetRole === 'pufferfish') {
+          hw.flags.imitatePuffer = true;
+        } else if (targetRole === 'admirer') {
+          hw.flags.imitateAdmirer = true;
+        } else if (targetRole === 'awakened_gargoyle') {
+          // 学石像鬼 → 双刀狼：觉醒后主刀 + 可留到之后夜晚的额外刀
+          hw.flags.imitateGargoyle = true;
+          hw.flags.hiddenExtraKnife = true;
+        } else if (getRoleMeta(targetRole).camp === CAMP.WOLF) {
+          // 模仿其他狼营角色：一次性额外刀
           hw.flags.hiddenExtraKnife = true;
         }
       }
     }
 
-    // 摄梦保护
-    const protectedSeat = ns.dreamTarget;
-    const dreamCatcher = [...this.players.values()].find(
-      (x) => this.effectiveRole(x) === 'dream_catcher' && x.alive
-    );
+    // 摄梦保护（真摄梦人 + 学摄梦隐狼可并存）
+    const dreamByActor = ns.dreamByActor || {};
+    const dreamKillSeats = new Set(ns.dreamKillSeats || []);
+    const isDreamProtected = (seat) =>
+      seat != null && Object.values(dreamByActor).some((s) => s === seat);
+    // 兼容旧字段：取任一梦游目标供日志等使用
+    ns.dreamTarget = Object.values(dreamByActor)[0] ?? null;
+    ns.dreamKill = dreamKillSeats.size ? [...dreamKillSeats][0] : null;
 
     const killSeat = ns.wolfKill;
 
@@ -1133,18 +1235,18 @@ class GameRoom {
     );
 
     // 连续摄杀：女巫无法解救
-    if (ns.dreamKill != null) {
-      markDead(ns.dreamKill, 'dream_kill');
+    for (const seat of dreamKillSeats) {
+      markDead(seat, 'dream_kill');
     }
 
     // 女巫救人：若刀口被保护则解药消耗但落空；不能救连续摄杀
     let saved = false;
     if (witch && ns.witchSave && killSeat != null && witch.flags.witchSave) {
       witch.flags.witchSave = false;
-      if (protectedSeat === killSeat) {
+      if (isDreamProtected(killSeat)) {
         // 落空：刀已被保护，解药仍消耗
         saved = false;
-      } else if (ns.dreamKill === killSeat) {
+      } else if (dreamKillSeats.has(killSeat)) {
         // 连续摄杀不可救
         saved = false;
       } else {
@@ -1154,11 +1256,11 @@ class GameRoom {
 
     // 狼刀结算
     if (killSeat != null) {
-      if (protectedSeat === killSeat) {
+      if (isDreamProtected(killSeat)) {
         // 梦游免疫，刀落空
       } else if (saved) {
         // 已救
-      } else if (ns.dreamKill === killSeat) {
+      } else if (dreamKillSeats.has(killSeat)) {
         // 已由连续摄杀标记
       } else {
         markDead(killSeat, 'wolf');
@@ -1173,9 +1275,9 @@ class GameRoom {
       if (hw) {
         hw.flags.hiddenExtraKnife = false;
         const es = ns.hiddenExtraKill;
-        if (protectedSeat === es) {
+        if (isDreamProtected(es)) {
           // 落空
-        } else if (ns.dreamKill === es) {
+        } else if (dreamKillSeats.has(es)) {
           // 已标记
         } else {
           markDead(es, 'hidden_extra');
@@ -1187,7 +1289,7 @@ class GameRoom {
     if (witch && ns.witchPoisonTarget != null && !ns.witchSave && witch.flags.witchPoison) {
       const ps = ns.witchPoisonTarget;
       witch.flags.witchPoison = false;
-      if (protectedSeat === ps) {
+      if (isDreamProtected(ps)) {
         // 免疫落空
       } else {
         markDead(ps, 'poison');
@@ -1204,7 +1306,7 @@ class GameRoom {
       if (hw) {
         hw.flags.witchPoison = false;
         const ps = ns.hiddenPoison;
-        if (protectedSeat === ps) {
+        if (isDreamProtected(ps)) {
           // 落空
         } else {
           markDead(ps, 'poison');
@@ -1214,14 +1316,19 @@ class GameRoom {
       }
     }
 
-    // 摄梦人夜间死亡连带梦游者（白天出局不带走）
-    if (dreamCatcher && deaths.has(dreamCatcher.seat) && protectedSeat != null) {
-      markDead(protectedSeat, 'dream_link');
+    // 摄梦人（含学摄梦隐狼）夜间死亡连带各自梦游者（白天出局不带走）
+    for (const [pid, targetSeat] of Object.entries(dreamByActor)) {
+      const dreamer = this.players.get(pid);
+      if (!dreamer || !deaths.has(dreamer.seat)) continue;
+      if (targetSeat != null) markDead(targetSeat, 'dream_link');
     }
 
-    // 更新摄梦记录
-    if (dreamCatcher && ns.dreamTarget != null) {
-      dreamCatcher.flags.lastDreamTarget = ns.dreamTarget;
+    // 更新各摄梦者记录
+    for (const [pid, targetSeat] of Object.entries(dreamByActor)) {
+      const dreamer = this.players.get(pid);
+      if (dreamer && targetSeat != null) {
+        dreamer.flags.lastDreamTarget = targetSeat;
+      }
     }
 
     // 应用死亡（白猫延迟）
@@ -1229,11 +1336,18 @@ class GameRoom {
     for (const [seat, reasons] of deaths.entries()) {
       const victim = this.getBySeat(seat);
       if (!victim || !victim.alive) continue;
-      if (this.effectiveRole(victim) === 'white_cat' || victim.flags.inheritedRole === 'white_cat') {
+      if (this.hasWhiteCatAbility(victim) && !victim.flags.whiteCatPending) {
         victim.flags.whiteCatPending = true;
         victim.flags.whiteCatFlipDay = this.day;
-        victim.flags.deathReasons = reasons;
+        victim.flags.deathReasons = this.mergeDeathReasons(victim.flags.deathReasons, reasons);
+        if (reasons.includes('poison') || reasons.includes('dream_kill')) {
+          victim.flags.poisoned = reasons.includes('poison');
+        }
         nightDeaths.push({ seat, reasons, delayed: true, name: victim.name });
+        this.addLog(
+          '系统',
+          `${seat} 号${victim.flags.imitateWhiteCat && this.effectiveRole(victim) !== 'white_cat' ? '（隐狼学白猫）' : '白猫'}翻牌，将存活至下次公投结束后`
+        );
       } else {
         this.killPlayer(victim, reasons);
         nightDeaths.push({ seat, reasons, delayed: false, name: victim.name });
@@ -1317,52 +1431,82 @@ class GameRoom {
   applyPrivateNightResults(ns) {
     for (const p of this.players.values()) {
       const role = this.effectiveRole(p);
-      if ((role === 'seer' || p.flags.imitateSeer) && ns.seerCheck != null) {
-        const t = this.getBySeat(ns.seerCheck);
+      const action = ns.actions?.[p.id];
+
+      // 预言家 / 学预言家隐狼：各自只拿自己的查验
+      let seerSeat = null;
+      if (role === 'seer' && action?.type === 'seer_check') {
+        seerSeat = action.targetSeat;
+      } else if (p.flags.imitateSeer) {
+        if (action?.type === 'hidden_night' && action.seer != null) seerSeat = action.seer;
+        else if (action?.type === 'seer_check') seerSeat = action.targetSeat;
+        else if (ns.hiddenSeerCheck != null) seerSeat = ns.hiddenSeerCheck;
+      }
+      if (seerSeat != null) {
+        const t = this.getBySeat(seerSeat);
         if (t) {
+          const result = this.checkAsSeer(t) === CAMP.WOLF ? '狼人' : '好人';
           p.flags.lastCheck = {
             seat: t.seat,
-            result: this.checkAsSeer(t) === CAMP.WOLF ? '狼人' : '好人',
+            result,
             night: this.night,
+            kind: 'camp',
           };
+          this.recordCheckMark(p, p.flags.lastCheck);
         }
       }
-      if ((role === 'mirror_maiden' || p.flags.imitateMirror) && ns.mirrorCheck != null) {
-        const t = this.getBySeat(ns.mirrorCheck);
+
+      // 魔镜少女 / 学魔镜隐狼：各自只拿自己的查验
+      let mirrorSeat = null;
+      if (role === 'mirror_maiden' && action?.type === 'mirror_check') {
+        mirrorSeat = action.targetSeat;
+      } else if (p.flags.imitateMirror) {
+        if (action?.type === 'hidden_night' && action.mirror != null) mirrorSeat = action.mirror;
+        else if (action?.type === 'mirror_check') mirrorSeat = action.targetSeat;
+        else if (ns.hiddenMirrorCheck != null) mirrorSeat = ns.hiddenMirrorCheck;
+      }
+      if (mirrorSeat != null) {
+        const t = this.getBySeat(mirrorSeat);
         if (t) {
           p.flags.lastCheck = {
             seat: t.seat,
             result: getRoleMeta(this.effectiveRole(t)).name,
             night: this.night,
+            kind: 'role',
           };
+          this.recordCheckMark(p, p.flags.lastCheck);
         }
       }
-      if (role === 'awakened_gargoyle') {
-        const checkSeat = p.flags._gargoyleCheckSeat;
-        if (checkSeat != null) {
-          const t = this.getBySeat(checkSeat);
-          if (t) {
-            p.flags.lastCheck = {
-              seat: t.seat,
-              result: getRoleMeta(this.effectiveRole(t)).name,
-              night: this.night,
-            };
-          }
-          delete p.flags._gargoyleCheckSeat;
-        }
-      }
+
     }
   }
 
+  /** 预言家/魔镜少女：累积查验标记（同一座位保留最新一次） */
+  recordCheckMark(p, mark) {
+    if (!p?.flags || mark?.seat == null) return;
+    if (!p.flags.checkMarks || typeof p.flags.checkMarks !== 'object') {
+      p.flags.checkMarks = {};
+    }
+    p.flags.checkMarks[String(mark.seat)] = {
+      seat: mark.seat,
+      result: mark.result,
+      kind: mark.kind || 'role',
+      night: mark.night,
+    };
+  }
+
   computeBearRoar() {
-    const bear = [...this.players.values()].find(
-      (x) => this.effectiveRole(x) === 'bear' && x.alive && !x.flags.whiteCatPending
+    // 查验重合：任一熊位（真熊 / 学熊隐狼）入夜前邻座有狼则咆哮
+    const checkers = this.alivePlayers().filter(
+      (p) => this.hasBearAbility(p) && !p.flags.whiteCatPending
     );
-    if (!bear) return false;
-    const adj = this.getAdjacentSeats(bear.seat);
-    return adj.some((s) => {
-      const t = this.getBySeat(s);
-      return t && this.isWolfCamp(t);
+    if (!checkers.length) return false;
+    return checkers.some((bear) => {
+      const seats = bear.flags.bearAdjSeats || this.getAdjacentSeats(bear.seat);
+      return seats.some((s) => {
+        const t = this.getBySeat(s);
+        return t && this.isWolfCamp(t);
+      });
     });
   }
 
@@ -1375,7 +1519,7 @@ class GameRoom {
       msgs.push('昨晚是平安夜。');
     } else {
       const parts = ds.nightDeaths.map((d) => {
-        if (d.delayed) return `${d.seat} 号（白猫）翻牌，暂未出局`;
+        if (d.delayed) return `${d.seat} 号翻牌自证，暂未出局（下次公投后出局）`;
         return `${d.seat} 号出局`;
       });
       msgs.push(`昨晚出局：${parts.join('、')}`);
@@ -1386,28 +1530,69 @@ class GameRoom {
 
   killPlayer(p, reasons) {
     const role = this.effectiveRole(p);
-    // 白猫：任意出局先翻牌，延迟到「下一次」放逐投票后再真死
-    if (
-      (role === 'white_cat' || p.flags.inheritedRole === 'white_cat') &&
-      !p.flags.whiteCatPending
-    ) {
+    const reasonList = Array.isArray(reasons) ? reasons : [reasons].filter(Boolean);
+    if (reasonList.includes('poison')) p.flags.poisoned = true;
+
+    // 白猫 / 学白猫隐狼：任意出局先翻牌，延迟到下次公投结束后再真死
+    if (this.hasWhiteCatAbility(p) && !p.flags.whiteCatPending) {
       p.flags.whiteCatPending = true;
       p.flags.whiteCatFlipDay = this.day;
-      p.flags.deathReasons = reasons;
-      this.addLog('系统', `${p.seat} 号白猫翻牌，将额外存活至下次放逐投票后`);
+      p.flags.deathReasons = this.mergeDeathReasons(p.flags.deathReasons, reasonList);
+      const label =
+        p.flags.imitateWhiteCat && role !== 'white_cat' ? '隐狼（学白猫）翻牌自证' : '白猫翻牌';
+      this.addLog('系统', `${p.seat} 号${label}，将额外存活至下次公投结束后（期间有投票权）`);
       return;
     }
     p.alive = false;
-    p.flags.deathReasons = reasons;
+    p.flags.deathReasons = this.mergeDeathReasons(p.flags.deathReasons, reasonList);
     // 警长死亡：询问移交警徽
     if (p.flags.isPoliceChief || p.id === this.policeChiefId) {
       this.police.onChiefDying(p);
     }
-    // 猎人开枪（非毒）
-    const poisoned = reasons.includes('poison');
-    if ((role === 'hunter' || p.flags.imitateHunter) && !poisoned) {
+    // 猎人开枪：毒杀 / 摄梦连续致死则无法开枪
+    if (this.canHunterShoot(p)) {
       this.pendingSkills.push({ type: 'hunter_shot', playerId: p.id, seat: p.seat });
+    } else if (
+      (role === 'hunter' || p.flags.imitateHunter) &&
+      this.isTakeAwayBlocked(p)
+    ) {
+      const why = this.isPoisonBlocked(p) ? '中毒' : '被摄梦致死';
+      this.addLog('系统', `${p.seat} 号猎人${why}出局，无法开枪`);
     }
+  }
+
+  mergeDeathReasons(prev, next) {
+    return [...new Set([...(prev || []), ...(next || [])])];
+  }
+
+  /** 毒药阻断 */
+  isPoisonBlocked(p, reasons) {
+    if (!p) return false;
+    if (p.flags?.poisoned) return true;
+    const list = reasons || p.flags?.deathReasons || [];
+    return list.includes('poison');
+  }
+
+  /** 毒药或连续摄梦致死：猎人/河豚失去带走技 */
+  isTakeAwayBlocked(p, reasons) {
+    if (!p) return false;
+    if (this.isPoisonBlocked(p, reasons)) return true;
+    const list = reasons || p.flags?.deathReasons || [];
+    return list.includes('dream_kill');
+  }
+
+  canHunterShoot(p, reasons) {
+    if (!p) return false;
+    const role = this.effectiveRole(p);
+    if (role !== 'hunter' && !p.flags?.imitateHunter) return false;
+    return !this.isTakeAwayBlocked(p, reasons);
+  }
+
+  canPufferFlip(p) {
+    if (!p) return false;
+    if (!this.hasPufferAbility(p)) return false;
+    if (p.flags?.pufferUsed) return false;
+    return !this.isTakeAwayBlocked(p);
   }
 
   beginDaySpeak() {
@@ -1425,15 +1610,14 @@ class GameRoom {
     this.phase = PHASE.DAY_SPEAK;
     let speakOrder = this.dayState?.pendingSpeakOrder;
     if (!speakOrder || !speakOrder.length) {
-      const alive = this.alivePlayers()
-        .filter((p) => !p.flags.whiteCatPending)
-        .sort((a, b) => a.seat - b.seat);
+      // 白猫翻牌期间仍可发言、投票
+      const alive = this.alivePlayers().sort((a, b) => a.seat - b.seat);
       speakOrder = alive.map((p) => p.seat);
     }
-    // 过滤已出局
+    // 过滤已出局（翻牌白猫仍 alive，保留）
     speakOrder = speakOrder.filter((seat) => {
       const p = this.getBySeat(seat);
-      return p && p.alive && !p.flags.whiteCatPending;
+      return p && p.alive;
     });
     this.dayState.pendingSpeakOrder = null;
     this.dayState.speakOrder = speakOrder;
@@ -1491,6 +1675,36 @@ class GameRoom {
     return PoliceElectionService.getVoteWeight(player, this.policeChiefId);
   }
 
+  /** 放逐票型文案：谁投了谁、谁弃票/未投 */
+  formatExileBallotDetail() {
+    const lines = [];
+    const targets = Object.keys(this.dayState.votersFor || {})
+      .map(Number)
+      .sort((a, b) => a - b);
+    for (const target of targets) {
+      const voters = [...(this.dayState.votersFor[target] || [])].sort((a, b) => a - b);
+      const weight = this.dayState.voteTally?.[target];
+      const weightHint = weight != null ? `（${weight}票）` : '';
+      lines.push(`${voters.map((s) => `${s}号`).join('、')} → ${target}号${weightHint}`);
+    }
+    const abstainSeats = [];
+    const votedIds = new Set(Object.keys(this.dayState.votes || {}));
+    for (const [pid, target] of Object.entries(this.dayState.votes || {})) {
+      if (target != null) continue;
+      const voter = this.players.get(pid);
+      if (voter) abstainSeats.push(voter.seat);
+    }
+    for (const p of this.alivePlayers()) {
+      if (p.isSpectator) continue;
+      if (!votedIds.has(p.id)) abstainSeats.push(p.seat);
+    }
+    abstainSeats.sort((a, b) => a - b);
+    if (abstainSeats.length) {
+      lines.push(`弃票：${[...new Set(abstainSeats)].map((s) => `${s}号`).join('、')}`);
+    }
+    return lines.length ? lines.join('；') : '无人有效投票';
+  }
+
   beginVote() {
     if (this.phase === PHASE.ENDED) return;
     this.phase = PHASE.DAY_VOTE;
@@ -1506,7 +1720,8 @@ class GameRoom {
   submitVote(socketId, targetSeat) {
     if (this.phase !== PHASE.DAY_VOTE) return { ok: false, error: '非投票阶段' };
     const p = this.players.get(socketId);
-    if (!p || p.isSpectator || !p.alive || p.flags.whiteCatPending) {
+    // 白猫翻牌期间有投票权
+    if (!p || p.isSpectator || !p.alive) {
       return { ok: false, error: '无法投票' };
     }
     if (targetSeat != null) {
@@ -1516,7 +1731,7 @@ class GameRoom {
     }
     this.dayState.votes[socketId] = targetSeat; // null = 弃票
     this.dayState.voted.add(socketId);
-    const need = this.alivePlayers().filter((x) => !x.flags.whiteCatPending);
+    const need = this.alivePlayers();
     if (need.every((x) => this.dayState.voted.has(x.id))) {
       this.resolveVote();
     }
@@ -1554,10 +1769,13 @@ class GameRoom {
       if (voter) this.dayState.votersFor[target].push(voter.seat);
     }
 
+    const ballotDetail = this.formatExileBallotDetail();
+    this.addLog('系统', `【放逐】票型：${ballotDetail}`);
+
     if (winners.length !== 1 || max === 0) {
       this.addLog('系统', '今日平票，无人出局');
       this.dayState.exileSeat = null;
-      this.publicAnnouncements = ['今日平票，无人出局。'];
+      this.publicAnnouncements = ['今日平票，无人出局。', `票型：${ballotDetail}`];
       this.afterExile();
       return;
     }
@@ -1567,22 +1785,34 @@ class GameRoom {
     const victim = this.getBySeat(exileSeat);
     if (victim) {
       this.addLog('系统', `${exileSeat} 号被放逐出局`);
-      const pendingCat =
-        this.effectiveRole(victim) === 'white_cat' || victim.flags.inheritedRole === 'white_cat';
+      const pendingCat = this.hasWhiteCatAbility(victim);
       this.publicAnnouncements = pendingCat
-        ? [`${exileSeat} 号（白猫）被放逐翻牌，将额外存活至下次投票后。`]
-        : [`${exileSeat} 号被放逐出局。`];
+        ? [
+            `${exileSeat} 号翻牌自证身份，将额外存活至下次公投结束后（期间有投票权）。`,
+            `票型：${ballotDetail}`,
+          ]
+        : [`${exileSeat} 号被放逐出局。`, `票型：${ballotDetail}`];
       this.killPlayer(victim, ['exile']);
     } else {
-      this.publicAnnouncements = [`${exileSeat} 号被放逐出局。`];
+      this.publicAnnouncements = [`${exileSeat} 号被放逐出局。`, `票型：${ballotDetail}`];
     }
 
-    // 河豚：仅自己被放逐时可发动
-    const puffer = [...this.players.values()].find(
-      (x) => this.effectiveRole(x) === 'pufferfish' && !x.flags.pufferUsed
+    // 河豚 / 学河豚隐狼：仅自己被放逐且未被毒杀时可翻牌
+    const puffers = [...this.players.values()].filter(
+      (x) => this.hasPufferAbility(x) && !x.flags.pufferUsed
     );
-    if (puffer && exileSeat === puffer.seat) {
-      this.pendingSkills.push({ type: 'puffer', playerId: puffer.id, seat: puffer.seat });
+    for (const puffer of puffers) {
+      if (exileSeat !== puffer.seat) continue;
+      if (this.canPufferFlip(puffer)) {
+        this.pendingSkills.push({ type: 'puffer', playerId: puffer.id, seat: puffer.seat });
+      } else if (this.isTakeAwayBlocked(puffer)) {
+        const why = this.isPoisonBlocked(puffer) ? '曾被毒杀' : '曾被摄梦致死';
+        const label =
+          puffer.flags.imitatePuffer && this.effectiveRole(puffer) !== 'pufferfish'
+            ? '隐狼（学河豚）'
+            : '河豚';
+        this.addLog('系统', `${puffer.seat} 号${label}${why}，放逐时无法翻牌`);
+      }
     }
 
     this.afterExile();
@@ -1606,9 +1836,14 @@ class GameRoom {
         if (p.flags.isPoliceChief || p.id === this.policeChiefId) {
           this.police.onChiefDying(p);
         }
-        const role = this.effectiveRole(p);
-        if (role === 'hunter' && !(p.flags.deathReasons || []).includes('poison')) {
+        if (this.canHunterShoot(p)) {
           this.pendingSkills.push({ type: 'hunter_shot', playerId: p.id, seat: p.seat });
+        } else if (
+          (this.effectiveRole(p) === 'hunter' || p.flags.imitateHunter) &&
+          this.isTakeAwayBlocked(p)
+        ) {
+          const why = this.isPoisonBlocked(p) ? '中毒' : '被摄梦致死';
+          this.addLog('系统', `${p.seat} 号猎人${why}出局，无法开枪`);
         }
       }
     }
@@ -1643,6 +1878,11 @@ class GameRoom {
     if (!pending) return { ok: false, error: '无待发动技能' };
 
     if (pending.type === 'hunter_shot') {
+      const shooter = this.players.get(socketId);
+      if (!this.canHunterShoot(shooter)) {
+        this.pendingSkills = this.pendingSkills.filter((s) => s.playerId !== socketId);
+        return { ok: false, error: '毒杀或摄梦致死后无法开枪' };
+      }
       const t = this.getBySeat(action.targetSeat);
       if (!t || !t.alive) return { ok: false, error: '目标无效' };
       this.killPlayer(t, ['hunter']);
@@ -1653,6 +1893,10 @@ class GameRoom {
     if (pending.type === 'puffer') {
       const p = this.players.get(socketId);
       if (!p || p.flags.pufferUsed) return { ok: false, error: '已使用' };
+      if (!this.canPufferFlip(p)) {
+        this.pendingSkills = this.pendingSkills.filter((s) => s.playerId !== socketId);
+        return { ok: false, error: '毒杀或摄梦致死后无法翻牌' };
+      }
       if (action.type === 'puffer_explode') {
         const voters = this.dayState.votersFor[p.seat] || [];
         p.flags.pufferUsed = true;
@@ -1733,25 +1977,47 @@ class GameRoom {
     this.addLog('系统', msg);
     const announcements = [msg];
 
-    // 暗恋者个人胜负：跟随暗恋对象阵营
+    // 暗恋者 / 学暗恋隐狼：个人胜负跟随偶像
     if (winner === 'wolf' || winner === 'village') {
       for (const p of this.players.values()) {
-        if (p.roleId !== 'admirer') continue;
+        if (!this.hasAdmirerAbility(p)) continue;
+        // 觉醒隐狼学暗恋：仍属狼队，额外结算「暗恋心愿」个人胜负
         const crushSeat = p.flags.idol;
+        const label =
+          p.flags.imitateAdmirer && this.effectiveRole(p) !== 'admirer'
+            ? '隐狼（学暗恋）'
+            : '暗恋者';
         if (crushSeat == null) {
-          announcements.push(`${p.seat} 号暗恋者未指定对象（个人失败）`);
+          announcements.push(`${p.seat} 号${label}未指定对象（个人失败）`);
           continue;
         }
         const crush = this.getBySeat(crushSeat);
         if (!crush) {
-          announcements.push(`${p.seat} 号暗恋者对象已不在（个人失败）`);
+          announcements.push(`${p.seat} 号${label}对象已不在（个人失败）`);
           continue;
         }
-        const crushWolf = this.isWolfCamp(crush);
-        const admirerWins =
-          (winner === 'wolf' && crushWolf) || (winner === 'village' && !crushWolf);
+        const idolGood = this.isIdolGood(crush);
+        const converted = !!(p.flags.converted || p.flags.convertor);
+        let admirerWins;
+        let note;
+        if (converted && idolGood) {
+          admirerWins = winner === 'village';
+          note = '被转化但偶像为好人，崇拜优先，须与好人一起赢';
+        } else if (converted && !idolGood) {
+          admirerWins = winner === 'wolf';
+          note = '被转化且偶像为狼，跟随狼队';
+        } else if (this.effectiveRole(p) === 'awakened_hidden_wolf') {
+          // 隐狼学暗恋：阵营仍随狼，心愿随偶像
+          admirerWins =
+            (winner === 'wolf' && !idolGood) || (winner === 'village' && idolGood);
+          note = `暗恋 ${crushSeat} 号（阵营仍为狼）`;
+        } else {
+          admirerWins =
+            (winner === 'wolf' && !idolGood) || (winner === 'village' && idolGood);
+          note = `暗恋 ${crushSeat} 号`;
+        }
         announcements.push(
-          `${p.seat} 号暗恋者暗恋 ${crushSeat} 号：个人${admirerWins ? '胜利' : '失败'}`
+          `${p.seat} 号${label}（${note}）：个人${admirerWins ? '胜利' : '失败'}`
         );
       }
     }
@@ -1816,6 +2082,14 @@ class GameRoom {
           base.roleId = this.effectiveRole(p);
           base.roleName = getRoleMeta(this.effectiveRole(p)).name;
           base.camp = this.isWolfCamp(p) ? CAMP.WOLF : CAMP.VILLAGE;
+        }
+        // 自爆公示：全场可见石像鬼身份 + 自爆出局标记
+        if (p.flags?.publicRevealed || p.flags?.exploded) {
+          base.roleId = this.effectiveRole(p);
+          base.roleName = getRoleMeta(this.effectiveRole(p)).name;
+          base.camp = this.isWolfCamp(p) ? CAMP.WOLF : CAMP.VILLAGE;
+          base.exploded = true;
+          base.deathLabel = '自爆出局';
         }
         if (me && !isSpec && me.id !== p.id && this.canSeeAsTeammate(me, p)) {
           if (WolfKill.isConvertor(p) && !WolfKill.isGargoyle(this, p)) {
@@ -1914,6 +2188,7 @@ class GameRoom {
         originalRoleId: me.roleId,
         flags: me.isSpectator ? {} : this.sanitizeFlags(me),
         lastCheck: me.flags?.lastCheck || null,
+        checkMarks: me.isSpectator ? null : me.flags?.checkMarks || null,
         wolfIntel: me.isSpectator ? null : WolfKill.getSoleConvertorIntel(this, me),
         needsNightAction:
           !me.isSpectator &&
@@ -2005,9 +2280,16 @@ class GameRoom {
       imitateHunter: !!me.flags.imitateHunter,
       imitateMirror: !!me.flags.imitateMirror,
       imitateSeer: !!me.flags.imitateSeer,
+      imitateWhiteCat: !!me.flags.imitateWhiteCat,
+      imitateBear: !!me.flags.imitateBear,
+      imitateGargoyle: !!me.flags.imitateGargoyle,
+      imitateDream: !!me.flags.imitateDream,
+      imitatePuffer: !!me.flags.imitatePuffer,
+      imitateAdmirer: !!me.flags.imitateAdmirer,
       hiddenExtraKnife: !!me.flags.hiddenExtraKnife,
       hiddenImitate: me.flags.hiddenImitate,
       isPoliceChief: !!me.flags.isPoliceChief,
+      whiteCatPending: !!me.flags.whiteCatPending,
     };
   }
 
@@ -2017,13 +2299,12 @@ class GameRoom {
     if (role === 'admirer' && this.night === 1) hints.push('请指定暗恋对象');
     if (role === 'dream_catcher') hints.push('请选择梦游者（每晚必须）');
     if (role === 'awakened_gargoyle') {
-      hints.push('请查验一名玩家的具体身份');
       hints.push('可与另一石像鬼语音沟通战术（其他玩家强制闭麦）');
       if (WolfKill.canParticipateWolfKill(this, me)) {
         hints.push('可选：提交刀人目标（两石像鬼多数决）');
       }
       if (!me.flags.gargoyleConvertedDone) {
-        hints.push('可选：转化一名好人（整局限一次，你可见该对象）');
+        hints.push('可选：转化一名好人（整局限一次；仅你可见该转化者，另一石像鬼不可见）');
       }
     }
     if (WolfKill.isConvertor(me) && role !== 'awakened_gargoyle') {
@@ -2038,10 +2319,38 @@ class GameRoom {
     if (role === 'awakened_hidden_wolf') {
       if (!me.flags.hiddenImitate) hints.push('可模仿一名玩家（立刻知其身份，当夜结束后获技能）');
       else hints.push(`已模仿：${getRoleMeta(me.flags.hiddenImitate)?.name || me.flags.hiddenImitate}（可知其身份）`);
-      if (this.hiddenCanKill()) hints.push('其余狼人已出局，你可以刀人');
-      if (me.flags.hiddenExtraKnife) hints.push('你有一次额外刀（女巫不可见）');
+      if (me.flags.imitateHunter) hints.push('已学猎人：非毒/非连摄出局时可开枪');
+      if (me.flags.imitateGargoyle) hints.push('已学石像鬼：双刀狼（第二刀今晚可不刀，可留到之后夜晚）');
+      if (me.flags.imitateWhiteCat) hints.push('已学白猫：出局时翻牌自证，下次公投后才真死');
+      if (me.flags.imitateBear) hints.push('已学熊：入夜前邻座查验与真熊重合');
+      if (me.flags.imitateDream) hints.push('已学摄梦人：每晚必须指定梦游者（技能同摄梦人）');
+      if (me.flags.imitatePuffer) {
+        hints.push(
+          me.flags.pufferUsed
+            ? '已学河豚：翻牌带走已使用'
+            : '已学河豚：被放逐时可翻牌带走投你的人'
+        );
+      }
+      if (me.flags.imitateAdmirer) {
+        hints.push(
+          me.flags.idol != null
+            ? `已学暗恋：偶像为 ${me.flags.idol} 号（个人心愿随偶像）`
+            : '已学暗恋：请指定一名暗恋对象（一次）'
+        );
+      }
+      if (this.hiddenCanKill()) {
+        hints.push('石像鬼与转化者均已出局，你可以带刀');
+      } else {
+        hints.push('需等所有觉醒石像鬼与转化者出局后才带刀');
+      }
+      if (me.flags.hiddenExtraKnife) {
+        hints.push('额外刀可用（女巫不可见；今晚可不使用，可留到之后夜晚）');
+      }
       if (me.flags.imitateMirror) hints.push('可查验一名玩家身份');
       if (me.flags.imitateSeer) hints.push('可查验一名玩家阵营');
+      if (me.flags.hiddenImitate === 'witch') {
+        hints.push(me.flags.witchPoison ? '已学女巫：可使用一瓶毒药' : '已学女巫：毒药已用完');
+      }
       hints.push('完成后请点「确认结束夜间行动」');
     }
     if (role === 'witch') {

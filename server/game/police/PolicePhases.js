@@ -13,9 +13,9 @@ const PolicePhase = {
 };
 
 const SpeakOrderMode = {
-  /** 从警长左边（座位号+1方向）开始顺时针 */
+  /** 左侧逆序：从警长左边（座位号+1）开始，座位号递减 */
   CLOCKWISE: 'clockwise',
-  /** 从警长右边（座位号-1方向）开始逆时针 */
+  /** 右侧顺序：从警长右边（座位号-1）开始，座位号递增 */
   COUNTERCLOCKWISE: 'counterclockwise',
 };
 

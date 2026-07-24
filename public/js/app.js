@@ -14,8 +14,56 @@
   const nightBgm = new NightBgm();
   const narrator = new GameNarrator();
   let narratorPrev = null;
+  let audioUnlocked = false;
   const narratorPref = localStorage.getItem('fs_narrator');
   if (narratorPref === '0') narrator.setEnabled(false);
+
+  /** 旁白播报时临时压低 BGM，结束后恢复滑条音量（不再永久改写 volume） */
+  narrator.onSpeakingChange = (speaking) => {
+    if (speaking) nightBgm.setDuck(0.35);
+    else nightBgm.clearDuck();
+  };
+
+  /** 浏览器自动播放策略：任意首次用户手势解锁 BGM + TTS */
+  async function unlockAudioOnce() {
+    if (audioUnlocked) {
+      if (state?.phase === 'night') {
+        try {
+          await nightBgm.ensureCtx();
+        } catch (_) {}
+      }
+      return;
+    }
+    try {
+      if (els.bgmVolume) nightBgm.setVolume(Number(els.bgmVolume.value) / 100);
+      const ok = await nightBgm.unlock();
+      narrator.unlock();
+      // 若当前已是夜晚，解锁后立即尝试起播 / 恢复挂起的 context
+      if (state?.phase === 'night') {
+        await nightBgm.sync('night');
+      }
+      if (ok) audioUnlocked = true;
+    } catch (_) {}
+  }
+  const unlockAudioEvents = ['pointerdown', 'keydown', 'touchstart', 'click'];
+  for (const ev of unlockAudioEvents) {
+    document.addEventListener(
+      ev,
+      () => {
+        unlockAudioOnce();
+      },
+      { capture: true, passive: true }
+    );
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (state?.phase === 'night') {
+      nightBgm.sync('night').catch(() => {});
+    }
+    try {
+      if (typeof speechSynthesis !== 'undefined') speechSynthesis.resume();
+    } catch (_) {}
+  });
 
   const els = {
     lobby: document.getElementById('view-lobby'),
@@ -93,7 +141,63 @@
     speakerHud: document.getElementById('speaker-hud'),
     speakerSeatLabel: document.getElementById('speaker-seat-label'),
     speakerNameLabel: document.getElementById('speaker-name-label'),
+    btnViewRole: document.getElementById('btn-view-role'),
+    roleReveal: document.getElementById('role-reveal'),
+    revealRoleImg: document.getElementById('reveal-role-img'),
+    revealRoleName: document.getElementById('reveal-role-name'),
+    revealRoleCamp: document.getElementById('reveal-role-camp'),
+    revealRoleDesc: document.getElementById('reveal-role-desc'),
+    btnCloseReveal: document.getElementById('btn-close-reveal'),
   };
+
+  /** 角色立绘（文件名与 public/image/角色/ 一致；暗恋者用「孤独少女」，隐狼头像为「觉醒银狼」） */
+  const ROLE_ART = {
+    awakened_gargoyle: { avatar: '石像鬼-头像.webp', full: '石像鬼-全身.webp' },
+    awakened_hidden_wolf: { avatar: '觉醒银狼-头像.webp', full: '觉醒隐狼-全身.webp' },
+    seer: { avatar: '预言家-头像.webp', full: '预言家-全身.webp' },
+    mirror_maiden: { avatar: '魔镜少女-头像.png', full: '魔镜少女-全身.webp' },
+    bear: { avatar: '熊-头像.webp', full: '熊-全身.webp' },
+    witch: { avatar: '女巫-头像.webp', full: '女巫-全身.webp' },
+    hunter: { avatar: '猎人-头像.webp', full: '猎人-全身.webp' },
+    pufferfish: { avatar: '河豚-头像.webp', full: '河豚-全身.webp' },
+    dream_catcher: { avatar: '摄梦人-头像.webp', full: '摄梦人-全身.webp' },
+    white_cat: { avatar: '白猫-头像.webp', full: '白猫-全身.webp' },
+    admirer: { avatar: '孤独少女-头像.webp', full: '孤独少女-全身.webp' },
+  };
+
+  function roleArtUrl(roleId, kind = 'avatar') {
+    const art = ROLE_ART[roleId];
+    if (!art) return '';
+    const file = art[kind] || art.avatar;
+    if (!file) return '';
+    return `/image/${encodeURIComponent('角色')}/${encodeURIComponent(file)}`;
+  }
+
+  function roleAvatarImg(roleId, className = 'role-avatar-img', alt = '') {
+    const url = roleArtUrl(roleId, 'avatar');
+    if (!url) return '';
+    return `<img class="${className}" src="${url}" alt="${escapeHtml(alt)}" loading="lazy" draggable="false" />`;
+  }
+
+  /** 预言家/魔镜少女查验标记（仅本人可见，由服务端下发 checkMarks） */
+  function checkMarkBadge(mark) {
+    if (!mark || !mark.result) return '';
+    const result = String(mark.result);
+    const isCamp = mark.kind === 'camp' || result === '好人' || result === '狼人';
+    if (isCamp) {
+      const tone = result === '狼人' ? 'wolf' : 'village';
+      const short = result === '狼人' ? '狼' : '好';
+      return `<span class="check-mark check-mark-${tone}" title="查验：${escapeHtml(result)}">${short}</span>`;
+    }
+    return `<span class="check-mark check-mark-role" title="查验：${escapeHtml(result)}">${escapeHtml(result)}</span>`;
+  }
+
+  /** 自爆等公开亮身份：头像上显示身份文字 */
+  function publicRoleBadge(p) {
+    if (!p?.exploded || !p.roleName) return '';
+    const label = p.roleName === '觉醒石像鬼' ? '石像鬼' : p.roleName;
+    return `<span class="check-mark check-mark-role check-mark-public" title="身份公示：${escapeHtml(p.roleName)}">${escapeHtml(label)}</span>`;
+  }
 
   let rolesMeta = {};
   let boardsMeta = [];
@@ -107,6 +211,8 @@
   let voteSubmitting = false;
   let lastPopupKey = '';
   let popupDismissedKey = '';
+  let lastPhaseForReveal = undefined;
+  let autoRevealDone = '';
   let isAdmin = sessionStorage.getItem('fs_admin') === '1';
   let siteOpen = false;
   let roomListData = [];
@@ -210,10 +316,60 @@
     }
   }
 
+  function closeMobileDrawers() {
+    document.body.classList.remove('drawer-info-open', 'drawer-chat-open');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (backdrop) backdrop.hidden = true;
+  }
+
+  function openMobileDrawer(which) {
+    closeMobileDrawers();
+    if (which === 'info') document.body.classList.add('drawer-info-open');
+    if (which === 'chat') document.body.classList.add('drawer-chat-open');
+    const backdrop = document.getElementById('mobile-drawer-backdrop');
+    if (backdrop) backdrop.hidden = false;
+    syncVisualViewport();
+  }
+
+  /** 软键盘：用 visualViewport 抬高抽屉，避免输入框被挡 */
+  function syncVisualViewport() {
+    const root = document.documentElement;
+    const vv = window.visualViewport;
+    if (!vv) {
+      root.style.setProperty('--vv-height', `${window.innerHeight}px`);
+      root.style.setProperty('--kb-inset', '0px');
+      document.body.classList.remove('keyboard-open');
+      return;
+    }
+    const height = Math.max(0, vv.height);
+    const offsetTop = vv.offsetTop || 0;
+    const kb = Math.max(0, window.innerHeight - height - offsetTop);
+    root.style.setProperty('--vv-height', `${height}px`);
+    root.style.setProperty('--kb-inset', `${kb}px`);
+    const keyboardOpen = kb > 80;
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+
+    if (
+      keyboardOpen &&
+      document.body.classList.contains('drawer-chat-open') &&
+      els.chatInput &&
+      document.activeElement === els.chatInput
+    ) {
+      requestAnimationFrame(() => {
+        try {
+          els.chatInput.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        } catch (_) {}
+      });
+    }
+  }
+
   function show(view) {
     els.lobby.hidden = view !== 'lobby';
     els.game.hidden = view !== 'game';
     els.ended.hidden = view !== 'ended';
+    document.body.classList.toggle('in-game', view === 'game');
+    document.body.classList.toggle('in-ended', view === 'ended');
+    if (view !== 'game') closeMobileDrawers();
     syncSceneBg(view);
   }
 
@@ -364,29 +520,26 @@
   function renderRoleSheet(boardId) {
     if (!els.roleList) return;
     const board = boardsMeta.find((b) => b.id === boardId) || boardsMeta[0];
+    const renderItem = (r) => {
+      const avatar = roleAvatarImg(r.id, 'role-sheet-avatar', r.name);
+      return `<li class="role-sheet-item${avatar ? ' has-avatar' : ''}">
+          ${avatar || ''}
+          <div class="role-sheet-body">
+            <div class="role-sheet-title">
+              <strong>${escapeHtml(r.name)}</strong>
+              <span class="camp-${r.camp}"> · ${r.camp === 'wolf' ? '狼人' : '好人'}${r.count != null ? ` ×${r.count}` : ''}</span>
+            </div>
+            <p>${escapeHtml(r.description || '')}</p>
+          </div>
+        </li>`;
+    };
     if (!board) {
-      els.roleList.innerHTML = (Object.values(rolesMeta) || [])
-        .map(
-          (r) => `<li>
-          <strong>${r.name}</strong>
-          <span class="camp-${r.camp}"> · ${r.camp === 'wolf' ? '狼人' : '好人'}</span>
-          <p>${r.description}</p>
-        </li>`
-        )
-        .join('');
+      els.roleList.innerHTML = (Object.values(rolesMeta) || []).map(renderItem).join('');
       return;
     }
     els.roleList.innerHTML =
       `<li class="role-board-head"><strong>${escapeHtml(board.name)}</strong><p>${escapeHtml(board.rulesNote || '')}</p></li>` +
-      (board.roles || [])
-        .map(
-          (r) => `<li>
-          <strong>${r.name}</strong>
-          <span class="camp-${r.camp}"> · ${r.camp === 'wolf' ? '狼人' : '好人'} ×${r.count}</span>
-          <p>${r.description}</p>
-        </li>`
-        )
-        .join('');
+      (board.roles || []).map(renderItem).join('');
   }
 
   socket.on('room_list', (data) => {
@@ -415,6 +568,7 @@
 
   socket.on('state', (s) => {
     if (!siteOpen && !isAdmin) return;
+    const prevPhase = lastPhaseForReveal;
     state = s;
     if (s?.isAdmin != null) setAdminUI(s.isAdmin);
     if (s?.code && s?.me?.name) saveSession(s.code, s.me.name);
@@ -422,14 +576,15 @@
     if (s.phase === 'lobby') {
       narrator.stop();
       narratorPrev = null;
+      nightBgm.clearDuck();
     } else if (s.phase === 'ended') {
       narratorPrev = narrator.sync(s, narratorPrev);
     } else {
-      // 旁白播报时略降 BGM，避免盖过口播
-      if (narrator.enabled && narrator.speaking) nightBgm.setVolume(Math.min(nightBgm.volume, 0.08));
       narratorPrev = narrator.sync(s, narratorPrev);
     }
     render();
+    maybeAutoRoleReveal(s, prevPhase);
+    lastPhaseForReveal = s.phase;
   });
 
   socket.on('chat', (msg) => {
@@ -741,6 +896,21 @@
     });
   }
 
+  if (els.btnViewRole) {
+    els.btnViewRole.addEventListener('click', () => openRoleReveal());
+  }
+  if (els.btnCloseReveal) {
+    els.btnCloseReveal.addEventListener('click', () => closeRoleReveal());
+  }
+  if (els.roleReveal) {
+    els.roleReveal.addEventListener('click', (e) => {
+      if (e.target.closest('[data-close-reveal]')) closeRoleReveal();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && els.roleReveal && !els.roleReveal.hidden) closeRoleReveal();
+  });
+
   els.btnNextGame.addEventListener('click', async () => {
     const res = await emit('back_to_lobby');
     if (!res.ok) alert(res.error || '无法返回大厅');
@@ -753,7 +923,9 @@
   });
 
   if (els.bgmVolume) {
+    nightBgm.setVolume(Number(els.bgmVolume.value) / 100);
     els.bgmVolume.addEventListener('input', () => {
+      unlockAudioOnce();
       nightBgm.setVolume(Number(els.bgmVolume.value) / 100);
     });
   }
@@ -768,13 +940,15 @@
 
   if (els.btnNarrator) {
     els.btnNarrator.addEventListener('click', async () => {
-      // 浏览器要求用户手势后才能出声：先解锁语音引擎
+      await unlockAudioOnce();
       narrator.setEnabled(!narrator.enabled);
       localStorage.setItem('fs_narrator', narrator.enabled ? '1' : '0');
       refreshNarratorBtn();
       if (narrator.enabled) {
         narrator.lastKey = '';
         narrator.say('旁白已开启。', 'narrator-on');
+      } else {
+        nightBgm.clearDuck();
       }
     });
   }
@@ -868,6 +1042,56 @@
     await emit('chat', { text });
   });
 
+  if (els.chatInput) {
+    els.chatInput.addEventListener('focus', () => {
+      openMobileDrawer('chat');
+      syncVisualViewport();
+      setTimeout(() => {
+        syncVisualViewport();
+        try {
+          els.chatInput.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (_) {}
+      }, 280);
+    });
+    els.chatInput.addEventListener('blur', () => {
+      setTimeout(syncVisualViewport, 120);
+    });
+  }
+
+  document.querySelectorAll('[data-open-drawer]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const which = btn.getAttribute('data-open-drawer');
+      if (document.body.classList.contains(`drawer-${which}-open`)) {
+        closeMobileDrawers();
+      } else {
+        openMobileDrawer(which);
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-close-drawer]').forEach((btn) => {
+    btn.addEventListener('click', () => closeMobileDrawers());
+  });
+
+  const drawerBackdrop = document.getElementById('mobile-drawer-backdrop');
+  if (drawerBackdrop) {
+    drawerBackdrop.addEventListener('click', () => closeMobileDrawers());
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMobileDrawers();
+  });
+
+  syncVisualViewport();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncVisualViewport);
+    window.visualViewport.addEventListener('scroll', syncVisualViewport);
+  }
+  window.addEventListener('resize', syncVisualViewport);
+  window.addEventListener('orientationchange', () => {
+    setTimeout(syncVisualViewport, 200);
+  });
+
   function renderRoomList() {
     if (!els.roomList) return;
     if (els.roomListMeta) {
@@ -937,6 +1161,11 @@
     if (els.btnNarrator) els.btnNarrator.hidden = isLobby;
     if (els.bgmWrap) els.bgmWrap.hidden = isLobby;
     if (els.btnAdminEndGame) els.btnAdminEndGame.hidden = !isAdmin || isLobby;
+    if (els.btnViewRole) {
+      const showView =
+        !isLobby && !!state.me && !state.me.isSpectator && !!state.me.roleId;
+      els.btnViewRole.hidden = !showView;
+    }
 
     if (isLobby) {
       renderLobbyChrome();
@@ -993,6 +1222,7 @@
     els.btnBots.hidden = !me?.isHost;
     if (els.btnClearBots) els.btnClearBots.hidden = !me?.isHost;
     els.btnStart.disabled = !state.canStart;
+    ensureMobileActionVisible(els.lobbyControls);
   }
 
   function renderGameChrome() {
@@ -1020,6 +1250,7 @@
 
     const me = state.me;
     if (me?.isSpectator) {
+      els.myRole.classList.remove('has-portrait');
       els.myRole.innerHTML = `
         <div class="role-name">观战中</div>
         <div class="role-camp">旁观席</div>
@@ -1027,10 +1258,18 @@
       `;
     } else {
       const meta = rolesMeta[me?.roleId] || {};
+      const fullUrl = roleArtUrl(me?.roleId, 'full');
+      const portrait = fullUrl
+        ? `<div class="role-portrait-wrap"><img class="role-portrait" src="${fullUrl}" alt="${escapeHtml(me?.roleName || '')}" draggable="false" /></div>`
+        : '';
+      els.myRole.classList.toggle('has-portrait', !!fullUrl);
       els.myRole.innerHTML = `
-        <div class="role-name">${me?.roleName || '—'}</div>
-        <div class="role-camp ${me?.camp || ''}">${me?.camp === 'wolf' ? '狼人阵营' : '好人阵营'}</div>
-        <p class="role-desc">${meta.description || ''}</p>
+        ${portrait}
+        <div class="role-meta">
+          <div class="role-name">${escapeHtml(me?.roleName || '—')}</div>
+          <div class="role-camp ${me?.camp || ''}">${me?.camp === 'wolf' ? '狼人阵营' : '好人阵营'}</div>
+          <p class="role-desc">${escapeHtml(meta.description || '')}</p>
+        </div>
       `;
     }
 
@@ -1060,7 +1299,10 @@
       return '退水阶段：竞选者可选择继续竞选或退水';
     }
     if (state.phase === 'police_vote') {
-      return '警长投票：点选竞选者头像后确认（候选人不可投自己，可弃票）';
+      const isPk = (state.police?.tieRound || 0) > 0;
+      return isPk
+        ? '平票 PK 投票：除 PK 选手外所有人可投，请点选后确认'
+        : '警长投票：仅未上警（含已退水）可投，竞选者不可投票';
     }
     if (state.phase === 'police_result') {
       return (state.announcements || []).join(' ') || '宣布警长';
@@ -1083,7 +1325,12 @@
       return;
     }
     const bits = [];
-    if (me.flags?.justConverted) bits.push('<div class="hint">你已被石像鬼转化，加入狼人阵营（转化者）</div>');
+    if (me.flags?.justConverted) {
+      bits.push('<div class="hint">你已被石像鬼转化，加入狼人阵营（转化者）</div>');
+      if (me.roleId === 'admirer' || me.flags?.idol) {
+        bits.push('<div class="hint">暗恋者：若偶像为好人，崇拜优先于转化，须与好人一起赢</div>');
+      }
+    }
     if (me.flags?.becomeWolf) bits.push('<div class="hint">偶像被放逐，你已变为狼人</div>');
     if (me.flags?.idol) bits.push(`<div>你的偶像：${me.flags.idol} 号</div>`);
     if (me.flags?.inheritedRole) {
@@ -1093,7 +1340,34 @@
     if (me.flags?.canConvertedKill) bits.push('<div class="hint">两位石像鬼已出局且仅剩你一名转化者：可刀人</div>');
     if (me.flags?.wolfKillBlocked) bits.push('<div class="hint">场上有多名转化者，本夜无法发动狼刀</div>');
     if (me.flags?.convertedSeat) bits.push(`<div class="hint">你转化了 ${me.flags.convertedSeat} 号</div>`);
-    if (me.flags?.hiddenAwakened) bits.push('<div class="hint">隐狼觉醒：可刀人/模仿</div>');
+    if (me.flags?.hiddenAwakened) bits.push('<div class="hint">隐狼觉醒：石像鬼与转化者已清，可带刀</div>');
+    if (me.flags?.imitateGargoyle) bits.push('<div class="hint">双刀狼：第二刀今晚可不刀，可留到之后夜晚</div>');
+    if (me.flags?.imitateHunter) bits.push('<div class="hint">学猎人：非毒/非连摄出局时可开枪带走一人</div>');
+    if (me.flags?.imitateSeer) bits.push('<div class="hint">学预言家：每晚可查验阵营</div>');
+    if (me.flags?.imitateMirror) bits.push('<div class="hint">学魔镜：每晚可查验身份</div>');
+    if (me.flags?.hiddenImitate === 'witch') {
+      bits.push(
+        `<div class="hint">学女巫：毒药${me.flags.witchPoison ? '可用' : '已用完'}（无解药）</div>`
+      );
+    }
+    if (me.flags?.imitateWhiteCat) bits.push('<div class="hint">学白猫：出局翻牌自证，下次公投后才真死</div>');
+    if (me.flags?.imitateBear) bits.push('<div class="hint">学熊：入夜前邻座查验与真熊重合</div>');
+    if (me.flags?.imitateDream) bits.push('<div class="hint">学摄梦：每晚必须指定梦游者</div>');
+    if (me.flags?.imitatePuffer) {
+      bits.push(
+        `<div class="hint">学河豚：${me.flags.pufferUsed ? '翻牌已使用' : '被放逐时可翻牌带走投你的人'}</div>`
+      );
+    }
+    if (me.flags?.imitateAdmirer) {
+      bits.push(
+        me.flags.idol != null
+          ? `<div class="hint">学暗恋：偶像 ${me.flags.idol} 号</div>`
+          : '<div class="hint">学暗恋：请指定暗恋对象</div>'
+      );
+    }
+    if (me.flags?.whiteCatPending || me.whiteCatPending) {
+      bits.push('<div class="hint">你已翻牌自证，下次公投结束后出局；期间仍有投票权</div>');
+    }
     if (me.wolfIntel) {
       const g = (me.wolfIntel.gargoyleSeats || [])
         .map((x) => `${x.seat}号石像鬼${x.alive ? '' : '(已出局)'}`)
@@ -1111,7 +1385,16 @@
       bits.push(`<div>解药：${me.flags.witchSave ? '有' : '无'} · 毒药：${me.flags.witchPoison ? '有' : '无'}</div>`);
     }
     if (me.lastCheck) {
-      bits.push(`<div class="hint">第${me.lastCheck.night}夜查验 ${me.lastCheck.seat} 号 → ${me.lastCheck.result}</div>`);
+      bits.push(`<div class="hint">第${me.lastCheck.night}夜查验 ${me.lastCheck.seat} 号 → ${escapeHtml(me.lastCheck.result)}</div>`);
+    }
+    const markList = me.checkMarks ? Object.values(me.checkMarks) : [];
+    if (markList.length > 1) {
+      const hist = markList
+        .slice()
+        .sort((a, b) => (a.night || 0) - (b.night || 0))
+        .map((m) => `${m.seat}号=${escapeHtml(m.result)}`)
+        .join(' · ');
+      bits.push(`<div>查验标记：${hist}</div>`);
     }
     if (state.nightHint?.length) {
       state.nightHint.forEach((h) => bits.push(`<div class="hint">${h}</div>`));
@@ -1281,16 +1564,36 @@
       seats: seats.map((s) => {
         const p = bySeat.get(s);
         return p
-          ? [s, p.name, p.alive, p.ready, p.connected, p.whiteCatPending, p.teammate, p.roleName, p.isBot]
+          ? [
+              s,
+              p.name,
+              p.alive,
+              p.ready,
+              p.connected,
+              p.whiteCatPending,
+              p.teammate,
+              p.roleId,
+              p.roleName,
+              p.isBot,
+              p.isPoliceChief,
+            ]
           : [s, null];
       }),
       speaker: state.currentSpeakerSeat,
       sel: selectedSeat,
       phase: state.phase,
       host: !!me?.isHost,
+      checks: me?.checkMarks || null,
+      voteTargets: [...(getVoteTargetSeats() || [])],
+      canPick: canPickVoteTarget(),
     });
     if (key === lastCircleKey) return;
     lastCircleKey = key;
+
+    const voteTargets = getVoteTargetSeats();
+    const isVoting = voteTargets != null;
+    const canPick = canPickVoteTarget();
+    if (els.circle) els.circle.classList.toggle('is-voting', isVoting);
 
     const n = Math.max(seats.length, 1);
     const micSvg =
@@ -1320,6 +1623,7 @@
         const isSpeaking =
           !isLobby && SPEAK_PHASES.has(state.phase) && state.currentSpeakerSeat === p.seat;
         const isChief = !!p.isPoliceChief;
+        const isVoteLit = isVoting && voteTargets.has(p.seat);
         const cls = [
           'player-token',
           isLobby ? '' : p.alive ? '' : 'dead',
@@ -1329,6 +1633,8 @@
           isChief ? 'police-chief' : '',
           isLobby && p.ready ? 'ready-seat' : '',
           isLobby && isBot && me?.isHost ? 'bot-seat' : '',
+          isVoteLit ? 'vote-lit' : '',
+          isVoting && !isVoteLit ? 'vote-dim' : '',
         ]
           .filter(Boolean)
           .join(' ');
@@ -1339,26 +1645,58 @@
           else if (p.ready) tag = '已准备';
           else tag = '未准备';
           if (isMe) tag += ' · 我';
-        } else if (isSpeaking) tag = state.phase === 'last_words' ? '遗言中' : '发言中';
+        } else if (isVoteLit && canPick) tag = selectedSeat === p.seat ? '已选中' : '可投票';
+        else if (isSpeaking) tag = state.phase === 'last_words' ? '遗言中' : '发言中';
         else if (isChief) tag = '👑 警长';
+        else if (p.exploded || p.deathLabel) tag = p.deathLabel || '自爆出局';
         else if (p.teammate) tag = p.roleName;
-        else if (p.whiteCatPending) tag = '白猫翻牌';
+        else if (p.whiteCatPending) tag = '翻牌中';
         else if (!p.alive) tag = '出局';
         else if (p.connected === false) tag = '掉线';
 
         const disabled = !isLobby && !p.alive ? 'disabled' : '';
-        return `<button type="button" class="${cls}" data-seat="${seat}" data-name="${escapeHtml(p.name)}" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%" ${disabled}>
+        const roleFace = !isLobby && p.roleId ? roleAvatarImg(p.roleId, 'token-role-img', p.roleName || '') : '';
+        const avatarFace = roleFace || seat;
+        const checkMark = !isLobby ? checkMarkBadge(me?.checkMarks?.[String(p.seat)] || me?.checkMarks?.[p.seat]) : '';
+        const publicMark = !isLobby && !checkMark ? publicRoleBadge(p) : '';
+        const markHtml = checkMark || publicMark;
+        return `<button type="button" class="${cls}${roleFace ? ' has-role-art' : ''}${markHtml ? ' has-check-mark' : ''}${p.exploded ? ' exploded' : ''}" data-seat="${seat}" data-name="${escapeHtml(p.name)}" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%" ${disabled}>
           <div class="avatar">
             <span class="t-seat">${seat}</span>
-            ${seat}
+            ${avatarFace}
             ${isChief ? '<span class="police-badge" title="警长">👑</span>' : ''}
             ${isSpeaking ? `<span class="mic-badge">${micSvg}</span>` : ''}
+            ${markHtml}
           </div>
           <div class="t-name">${escapeHtml(p.name)}</div>
           ${tag ? `<div class="t-tag">${tag}</div>` : ''}
         </button>`;
       })
       .join('');
+  }
+
+  /** 当前阶段可投票的目标座位（放逐票 / 警长票） */
+  function getVoteTargetSeats() {
+    if (!state || state.phase === 'lobby') return null;
+    if (state.phase === 'day_vote') {
+      const me = state.me;
+      const seats = (state.players || [])
+        .filter((p) => p.alive && !(me && !me.isSpectator && p.seat === me.seat))
+        .map((p) => p.seat);
+      return new Set(seats);
+    }
+    if (state.phase === 'police_vote') {
+      return new Set(state.police?.candidates || []);
+    }
+    return null;
+  }
+
+  function canPickVoteTarget() {
+    const me = state?.me;
+    if (!me || me.isSpectator || !me.alive) return false;
+    if (state.phase === 'day_vote') return !me.hasVoted;
+    if (state.phase === 'police_vote') return !!me.canPoliceVote && !me.hasPoliceVoted;
+    return false;
   }
 
   function renderActions(force) {
@@ -1381,11 +1719,13 @@
       me.hasWithdrawnAction,
       me.hasPoliceVoted,
       me.isCandidate,
+      me.canPoliceVote,
       me.isPoliceChief,
       me.canTransfer,
       state.pendingSkill?.type,
       state.currentSpeakerSeat,
       state.night,
+      state.police?.tieRound,
       (state.police?.candidates || []).join(','),
     ].join('|');
     if (!force && key === lastActionKey) return;
@@ -1396,6 +1736,7 @@
     if (me.isSpectator) {
       parts.push(`<div class="hint-text">观战模式：可听发言、看进程，不能行动/投票。</div>`);
       els.actionBar.innerHTML = parts.join('');
+      ensureMobileActionVisible();
       return;
     }
 
@@ -1438,17 +1779,31 @@
           `<button type="button" class="btn btn-ghost" data-action="police-withdraw" data-leave="1">退水</button>`
         );
       }
-    } else if (state.phase === 'police_vote' && me.alive && !me.whiteCatPending) {
-      if (me.hasPoliceVoted) {
+    } else if (state.phase === 'police_vote' && me.alive) {
+      const isPk = (state.police?.tieRound || 0) > 0;
+      const cands = (state.police?.candidates || []).join('、');
+      if (!me.canPoliceVote) {
+        parts.push(
+          `<div class="hint-text">${
+            me.isCandidate
+              ? isPk
+                ? `你是 PK 选手（${cands || '—'} 号），不能投票，请等待其他人表决…`
+                : `你是竞选者（${cands || '—'} 号），由警下投票，请等待…`
+              : '本阶段你无法参与警长投票，请等待…'
+          }</div>`
+        );
+      } else if (me.hasPoliceVoted) {
         const tip =
           me.myPoliceVote == null
-            ? '你已弃票，等待其他人…'
+            ? `你已弃票，等待其他人…`
             : `你已投票给 ${me.myPoliceVote} 号，等待其他人…`;
         parts.push(`<div class="hint-text">${tip}</div>`);
       } else {
-        const cands = (state.police?.candidates || []).join('、');
+        const ruleTip = isPk
+          ? '除 PK 选手外均可投'
+          : '仅警下可投';
         parts.push(
-          `<div class="hint-text">竞选者：${cands || '—'} 号。点选头像后确认（不可投自己）${
+          `<div class="hint-text">${isPk ? '平票 PK · ' : ''}高亮头像为可投对象：${cands || '—'} 号。点选后确认（${ruleTip}）${
             selectedSeat ? ` · 当前选中 ${selectedSeat} 号` : ''
           }</div>`
         );
@@ -1465,10 +1820,10 @@
       if (me.isPoliceChief) {
         parts.push(`<div class="hint-text">请选择白天发言顺序（从你邻座开始）</div>`);
         parts.push(
-          `<button type="button" class="btn btn-primary" data-action="police-order" data-mode="clockwise">从左边顺时针</button>`
+          `<button type="button" class="btn btn-primary" data-action="police-order" data-mode="clockwise">左侧逆序</button>`
         );
         parts.push(
-          `<button type="button" class="btn btn-secondary" data-action="police-order" data-mode="counterclockwise">从右边逆时针</button>`
+          `<button type="button" class="btn btn-secondary" data-action="police-order" data-mode="counterclockwise">右侧顺序</button>`
         );
       } else {
         parts.push(`<div class="hint-text">等待警长选择发言顺序…</div>`);
@@ -1487,13 +1842,13 @@
       } else if (state.currentSpeakerSeat) {
         parts.push(`<div class="hint-text">请听 ${state.currentSpeakerSeat} 号发言…</div>`);
       }
-    } else if (state.phase === 'day_vote' && me.alive && !me.whiteCatPending) {
+    } else if (state.phase === 'day_vote' && me.alive) {
       if (me.hasVoted) {
         const tip =
           me.myVote == null ? '你已弃票，等待其他人…' : `你已投票给 ${me.myVote} 号，等待其他人…`;
         parts.push(`<div class="hint-text">${tip}</div>`);
       } else {
-        parts.push(`<div class="hint-text">① 点击上方玩家头像选人 ② 再点确认投票${selectedSeat ? `（当前选中 ${selectedSeat} 号）` : ''}</div>`);
+        parts.push(`<div class="hint-text">高亮头像为可投对象：① 点击头像选人 ② 再点确认投票${selectedSeat ? `（当前选中 ${selectedSeat} 号）` : ''}</div>`);
         parts.push(
           `<button type="button" class="btn btn-primary btn-confirm-vote" data-action="vote-confirm"${selectedSeat == null ? ' disabled' : ''}>确认投票${selectedSeat != null ? `：${selectedSeat}号` : ''}</button>`
         );
@@ -1507,7 +1862,6 @@
       }
       if (role === 'dream_catcher') parts.push(nightBtn('摄梦', 'dream', true));
       if (role === 'awakened_gargoyle') {
-        parts.push(nightBtn('查验身份', 'gargoyle_check', true));
         if (me.flags?.canWolfKill) parts.push(nightBtn('刀人', 'wolf_kill', true));
         if (!me.flags?.gargoyleConvertedDone) {
           parts.push(nightBtn('转化好人', 'gargoyle_convert', true));
@@ -1523,10 +1877,16 @@
           parts.push(nightBtn('模仿', 'hidden_imitate', true));
         }
         if (me.flags?.hiddenAwakened || me.flags?.canWolfKill) {
-          parts.push(nightBtn('刀人', 'wolf_kill', true));
+          parts.push(nightBtn('刀人（第一刀）', 'wolf_kill', true));
         }
-        if (me.flags?.hiddenExtraKnife && me.flags?.hiddenAwakened) {
-          parts.push(nightBtn('额外刀（女巫不可见）', 'hidden_extra_kill', true));
+        if (me.flags?.hiddenExtraKnife && (me.flags?.hiddenAwakened || me.flags?.canWolfKill)) {
+          parts.push(nightBtn('额外刀·可留夜（女巫不可见）', 'hidden_extra_kill', true));
+        }
+        if (me.flags?.imitateDream) {
+          parts.push(nightBtn('摄梦', 'dream', true));
+        }
+        if (me.flags?.imitateAdmirer && me.flags?.idol == null) {
+          parts.push(nightBtn('指定暗恋对象', 'idol', true));
         }
         if (me.flags?.imitateMirror) {
           parts.push(nightBtn('查验身份', 'mirror_check', true));
@@ -1584,6 +1944,16 @@
     }
 
     els.actionBar.innerHTML = parts.join('');
+    ensureMobileActionVisible();
+  }
+
+  function ensureMobileActionVisible(target) {
+    const bar = target || els.actionBar;
+    if (!bar || bar.hidden) return;
+    if (typeof window.matchMedia === 'function' && !window.matchMedia('(max-width: 960px)').matches) {
+      return;
+    }
+    /* 手机端操作栏已 fixed 在 Dock 上方，无需再 scrollIntoView */
   }
 
   function nightBtn(label, type, needTarget, style = 'secondary') {
@@ -1604,12 +1974,70 @@
     els.endTitle.textContent = win;
     els.endSub.textContent = '本局身份公示 · 房间不解散，房主可开下一局';
     els.endRoles.innerHTML = (state.players || [])
-      .map(
-        (p) => `<div><span>${p.seat} 号 ${escapeHtml(p.name)}</span><span>${p.roleName || ''}</span></div>`
-      )
+      .map((p) => {
+        const avatar = roleAvatarImg(p.roleId, 'end-role-avatar', p.roleName || '');
+        return `<div class="end-role-row${avatar ? ' has-avatar' : ''}">
+          ${avatar || ''}
+          <span class="end-role-who">${p.seat} 号 ${escapeHtml(p.name)}</span>
+          <span class="end-role-name">${escapeHtml(p.roleName || '')}</span>
+        </div>`;
+      })
       .join('');
     els.btnNextGame.hidden = !state.me?.isHost;
     if (els.btnAdminEndGame) els.btnAdminEndGame.hidden = true;
+    if (els.btnViewRole) els.btnViewRole.hidden = true;
+    closeRoleReveal();
+  }
+
+  function openRoleReveal() {
+    const me = state?.me;
+    if (!els.roleReveal || !me?.roleId || me.isSpectator) return;
+    const meta = rolesMeta[me.roleId] || {};
+    const fullUrl = roleArtUrl(me.roleId, 'full') || roleArtUrl(me.roleId, 'avatar');
+    if (els.revealRoleImg) {
+      if (fullUrl) {
+        els.revealRoleImg.hidden = false;
+        els.revealRoleImg.src = fullUrl;
+        els.revealRoleImg.alt = me.roleName || '';
+      } else {
+        els.revealRoleImg.hidden = true;
+        els.revealRoleImg.removeAttribute('src');
+      }
+    }
+    if (els.revealRoleName) els.revealRoleName.textContent = me.roleName || '—';
+    if (els.revealRoleCamp) {
+      els.revealRoleCamp.textContent = me.camp === 'wolf' ? '狼人阵营' : '好人阵营';
+      els.revealRoleCamp.className = 'role-reveal-camp ' + (me.camp || '');
+    }
+    if (els.revealRoleDesc) els.revealRoleDesc.textContent = meta.description || '';
+    els.roleReveal.hidden = false;
+    document.body.classList.add('role-reveal-open');
+  }
+
+  function closeRoleReveal() {
+    if (!els.roleReveal) return;
+    els.roleReveal.hidden = true;
+    document.body.classList.remove('role-reveal-open');
+  }
+
+  function maybeAutoRoleReveal(s, prevPhase) {
+    if (!s) return;
+    if (s.phase === 'lobby') {
+      autoRevealDone = '';
+      closeRoleReveal();
+      return;
+    }
+    const me = s.me;
+    if (!me || me.isSpectator || !me.roleId) return;
+    if (s.phase === 'ended') return;
+    const key = `${s.code}:${me.roleId}`;
+    if (autoRevealDone === key) return;
+    const leavingLobby = prevPhase === 'lobby';
+    const midJoin = prevPhase === undefined && s.phase !== 'lobby';
+    if (leavingLobby || midJoin) {
+      autoRevealDone = key;
+      openRoleReveal();
+    }
   }
 
   function appendChat(msg) {

@@ -712,13 +712,13 @@ setInterval(() => {
         broadcastRoom(room);
       }
     }
-    // 警长投票
+    // 警长投票：首轮跳过竞选者；PK 轮仅跳过 PK 选手（其余含首轮落选者可投）
     if (room.phase === 'police_vote') {
       for (const [pid, p] of room.players) {
         if (!String(pid).startsWith('bot_')) continue;
-        if (!p.alive || p.flags.whiteCatPending) continue;
+        if (!room.police.canPoliceVote(p)) continue;
         if (room.police.voted.has(pid)) continue;
-        const cands = room.police.candidates.filter((s) => s !== p.seat);
+        const cands = [...room.police.candidates];
         const pick =
           cands.length && Math.random() > 0.1
             ? cands[Math.floor(Math.random() * cands.length)]
@@ -785,8 +785,6 @@ function autoNight(room, pid, p) {
     return;
   }
   if (role === 'awakened_gargoyle') {
-    const t = rand();
-    if (t) room.submitNightAction(pid, { type: 'gargoyle_check', targetSeat: t.seat });
     const killTarget = rand();
     if (killTarget) room.submitNightAction(pid, { type: 'wolf_kill', targetSeat: killTarget.seat });
     room.submitNightAction(pid, { type: 'done' });
@@ -812,9 +810,21 @@ function autoNight(room, pid, p) {
       const t = rand();
       if (t) room.submitNightAction(pid, { type: 'wolf_kill', targetSeat: t.seat });
     }
+    if (p.flags.imitateDream) {
+      const t = rand();
+      if (t) room.submitNightAction(pid, { type: 'dream', targetSeat: t.seat });
+    }
+    if (p.flags.imitateAdmirer && p.flags.idol == null) {
+      const t = rand();
+      if (t) room.submitNightAction(pid, { type: 'idol', targetSeat: t.seat });
+    }
     if (p.flags.imitateMirror) {
       const t = rand();
       if (t) room.submitNightAction(pid, { type: 'mirror_check', targetSeat: t.seat });
+    }
+    if (p.flags.imitateSeer) {
+      const t = rand();
+      if (t) room.submitNightAction(pid, { type: 'seer_check', targetSeat: t.seat });
     }
     room.submitNightAction(pid, { type: 'done' });
     return;

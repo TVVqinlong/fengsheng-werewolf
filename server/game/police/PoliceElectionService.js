@@ -74,7 +74,7 @@ class PoliceElectionService {
       return { ok: false, error: '非上警报名阶段' };
     }
     const p = this.room.players.get(socketId);
-    if (!p || p.isSpectator || !p.alive || p.flags.whiteCatPending) {
+    if (!p || p.isSpectator || !p.alive) {
       return { ok: false, error: '无法报名' };
     }
     if (this.registrations.has(socketId)) {
@@ -86,7 +86,7 @@ class PoliceElectionService {
       seat: p.seat,
       want: !!want,
     });
-    this.room.addLog('系统', `${p.seat} 号选择了${want ? '上警' : '不上警'}`);
+    // 报名过程不逐人播报，等 finishRegister 统一公布上警名单
 
     const need = this._aliveVoters();
     if (need.every((x) => this.registrations.has(x.id))) {
@@ -119,6 +119,11 @@ class PoliceElectionService {
       return;
     }
 
+    // 只播报一次：有哪些玩家上警
+    const list = this.candidates.join('、');
+    this.room.addLog('系统', `【上警】上警玩家：${list} 号`);
+    this.room.publicAnnouncements = [`上警玩家：${list} 号。`];
+
     if (this.candidates.length === 1) {
       this._elect(this.candidates[0], 'sole');
       return;
@@ -137,7 +142,7 @@ class PoliceElectionService {
     this.room.publicAnnouncements = [
       isPk
         ? `平票 PK 发言：${seats.join('、')} 号依次发言。`
-        : `上警发言：共 ${seats.length} 人竞选，按座位号依次发言。`,
+        : `上警玩家：${seats.join('、')} 号，按座位号依次发言。`,
     ];
     this.room.addLog(
       '系统',
@@ -258,15 +263,25 @@ class PoliceElectionService {
     this.voted = new Set();
     this.room.dayState.currentSpeakerSeat = null;
     const tip = isPk
-      ? '平票 PK 投票：请在平票玩家中投票（候选人不可投自己）。'
-      : '警长投票：请投票给竞选者（候选人不可投自己，可弃票）。';
+      ? `平票 PK 投票：除 ${this.candidates.join('、')} 号外所有人可投票（可弃票）。`
+      : '警长投票：仅未上警（含已退水）可投票；竞选者不可投票，可弃票。';
     this.room.publicAnnouncements = [tip];
-    this.room.addLog('系统', `【上警】${isPk ? 'PK ' : ''}投票开始`);
+    this.room.addLog(
+      '系统',
+      isPk
+        ? `【上警】PK 投票开始（除 PK 者外全员可投）`
+        : '【上警】投票开始（仅警下可投）'
+    );
     this.bus.emit(PoliceEvents.PoliceVoteStart, {
       candidates: [...this.candidates],
       isPk: !!isPk,
     });
     this.room.setPhaseTimer(POLICE_VOTE_MS, () => this.resolveVote());
+
+    // 无人可投 → 立即按平票规则结算
+    if (this._policeVoters().length === 0) {
+      this.resolveVote();
+    }
   }
 
   vote(socketId, targetSeat) {
@@ -274,8 +289,17 @@ class PoliceElectionService {
       return { ok: false, error: '非警长投票阶段' };
     }
     const p = this.room.players.get(socketId);
-    if (!p || p.isSpectator || !p.alive || p.flags.whiteCatPending) {
+    if (!p || p.isSpectator || !p.alive) {
       return { ok: false, error: '无法投票' };
+    }
+    if (!this.canPoliceVote(p)) {
+      const isPk = this.tieRound > 0;
+      return {
+        ok: false,
+        error: isPk
+          ? 'PK 选手不可投票（其余玩家均可投）'
+          : '仅未上警的玩家可以投票（竞选者不可投）',
+      };
     }
     if (this.voted.has(socketId)) {
       return { ok: false, error: '已投票' };
@@ -283,9 +307,6 @@ class PoliceElectionService {
     if (targetSeat != null) {
       if (!this.candidates.includes(targetSeat)) {
         return { ok: false, error: '只能投给竞选者' };
-      }
-      if (p.seat === targetSeat) {
-        return { ok: false, error: '候选人不能投自己' };
       }
     }
     this.votes[socketId] = targetSeat;
@@ -295,8 +316,8 @@ class PoliceElectionService {
       targetSeat,
     });
 
-    const need = this._aliveVoters();
-    if (need.every((x) => this.voted.has(x.id))) {
+    const need = this._policeVoters();
+    if (need.length && need.every((x) => this.voted.has(x.id))) {
       this.resolveVote();
     }
     return { ok: true };
@@ -310,6 +331,9 @@ class PoliceElectionService {
     for (const [pid, seat] of Object.entries(this.votes)) {
       if (seat == null) continue;
       const voter = this.room.players.get(pid);
+      if (!voter) continue;
+      // 竞选者的票一律无效（防御）；已投出的警下票照常计入
+      if (this.candidates.includes(voter.seat)) continue;
       const w = this.getVoteWeight(voter);
       tally[seat] = (tally[seat] || 0) + w;
     }
@@ -326,7 +350,12 @@ class PoliceElectionService {
       }
     }
 
-    // 全弃票 / 无人得票 → 视为平票无警长（或全候选平）
+    const tallyText = this.candidates
+      .map((s) => `${s}号 ${tally[s] || 0}票`)
+      .join('，');
+    this.room.addLog('系统', `【上警】计票：${tallyText || '无人得票'}`);
+
+    // 全弃票 / 无人得票 → 全体竞选者平票
     if (max === 0) {
       winners = [...this.candidates];
     }
@@ -339,7 +368,9 @@ class PoliceElectionService {
     // 平票
     if (this.tieRound >= 1) {
       this.room.addLog('系统', '【上警】再次平票，本局无警长');
-      this.room.publicAnnouncements = ['警长竞选再次平票，本局无警长。'];
+      this.room.publicAnnouncements = [
+        `平票 PK 后仍平票（${winners.join('、')} 号），本局无警长。`,
+      ];
       this.bus.emit(PoliceEvents.PoliceSkipped, { reason: 'double_tie' });
       this._finishWithoutChief();
       return;
@@ -347,7 +378,16 @@ class PoliceElectionService {
 
     this.tieRound = 1;
     this.pkSeats = winners.filter((s) => this.candidates.includes(s));
+    if (this.pkSeats.length < 2) {
+      // 防御：平票名单异常时直接无警长
+      this.room.addLog('系统', '【上警】平票名单异常，本局无警长');
+      this._finishWithoutChief();
+      return;
+    }
     this.candidates = [...this.pkSeats];
+    this.room.publicAnnouncements = [
+      `警长投票平票：${this.pkSeats.join('、')} 号票数最高且相同，进入平票 PK 发言。`,
+    ];
     this.room.addLog(
       '系统',
       `【上警】平票：${this.pkSeats.join('、')} 号进入 PK 发言`
@@ -367,7 +407,10 @@ class PoliceElectionService {
     this.subPhase = PolicePhase.RESULT;
     this.room.phase = PolicePhase.RESULT;
     this.room.dayState.currentSpeakerSeat = null;
-    this.room.publicAnnouncements = [`${seat} 号当选警长！`];
+    this.room.publicAnnouncements =
+      reason === 'sole'
+        ? [`上警玩家：${seat} 号，直接当选警长。`]
+        : [`${seat} 号当选警长！`];
     this.room.addLog('系统', `【上警】${seat} 号当选警长（${reason}）`);
     this.bus.emit(PoliceEvents.PoliceElected, { seat, playerId: p.id, reason });
     this.room.setPhaseTimer(POLICE_RESULT_MS, () => this.beginOrderSelect());
@@ -383,7 +426,7 @@ class PoliceElectionService {
     this.room.publicAnnouncements = ['请警长选择白天发言顺序。'];
     this.room.addLog('系统', '【上警】请警长选择发言顺序');
     this.room.setPhaseTimer(POLICE_ORDER_MS, () => {
-      // 超时默认顺时针
+      // 超时默认左侧逆序
       this.chooseSpeakOrder(this.room.policeChiefId, SpeakOrderMode.CLOCKWISE);
     });
   }
@@ -415,7 +458,6 @@ class PoliceElectionService {
   buildSpeakOrder(mode) {
     const alive = this.room
       .alivePlayers()
-      .filter((p) => !p.flags.whiteCatPending)
       .sort((a, b) => a.seat - b.seat);
     const seats = alive.map((p) => p.seat);
     if (!seats.length) return [];
@@ -436,16 +478,16 @@ class PoliceElectionService {
     };
 
     if (mode === SpeakOrderMode.COUNTERCLOCKWISE && chiefSeat != null) {
-      // 从警长右边开始逆时针（座位号递减）
+      // 右侧顺序：从警长右边开始，座位号递增
       const idx = seats.indexOf(chiefSeat);
       const start = seats[(idx - 1 + n) % n];
-      return rotateFrom(start, true);
+      return rotateFrom(start, false);
     }
-    // CLOCKWISE：从警长左边开始顺时针（座位号递增）
+    // CLOCKWISE：左侧逆序，从警长左边开始，座位号递减
     if (chiefSeat != null) {
       const idx = seats.indexOf(chiefSeat);
       const start = seats[(idx + 1) % n];
-      return rotateFrom(start, false);
+      return rotateFrom(start, true);
     }
     return seats;
   }
@@ -521,7 +563,23 @@ class PoliceElectionService {
   }
 
   _aliveVoters() {
-    return this.room.alivePlayers().filter((p) => !p.flags.whiteCatPending);
+    return this.room.alivePlayers();
+  }
+
+  /**
+   * 警长票资格：
+   * - 首轮：仅警下可投（未上警 / 已退水；当前 candidates 中的竞选者不可投）
+   * - PK 轮：除 PK 者外所有人可投（candidates 已收成 pkSeats，首轮落选者可投）
+   * - 白猫翻牌期间仍可投票
+   */
+  canPoliceVote(p) {
+    if (!p || p.isSpectator || !p.alive) return false;
+    if (this.candidates.includes(p.seat)) return false;
+    return true;
+  }
+
+  _policeVoters() {
+    return this._aliveVoters().filter((p) => this.canPoliceVote(p));
   }
 
   /** 公开快照（断线重连） */
@@ -549,6 +607,8 @@ class PoliceElectionService {
       policeChiefId: this.room.policeChiefId,
       speakOrderModes: SpeakOrderMode,
       pendingTransfer: this.pendingTransfer,
+      voterCount: this.subPhase === PolicePhase.VOTE ? this._policeVoters().length : undefined,
+      votedCount: this.subPhase === PolicePhase.VOTE ? this.voted.size : undefined,
     };
   }
 
@@ -564,6 +624,7 @@ class PoliceElectionService {
       hasPoliceVoted: this.voted.has(socketId),
       myPoliceVote: this.voted.has(socketId) ? this.votes[socketId] : undefined,
       isCandidate: this.candidates.includes(p.seat),
+      canPoliceVote: this.canPoliceVote(p),
       isPoliceChief: !!p.flags.isPoliceChief,
       canTransfer: !!this.room.pendingSkills.find(
         (s) => s.type === 'police_transfer' && s.playerId === socketId
